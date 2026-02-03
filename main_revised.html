@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Automation Dashboard</title>
+
+    <!-- Dependencies -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/charts/loader.js"></script>
+
+    <style>
+        :root {
+            --primary: #1A7499;
+            --secondary: #1F305E;
+            --bg-light: #f8fafc;
+            --sidebar-width: 260px;
+            --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-light);
+            color: #334155;
+            margin: 0;
+        }
+
+        /* Global Loader */
+        #globalLoader {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 10001;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+
+        /* Layout Structure */
+        .navbar {
+            background: var(--secondary);
+            height: 65px;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            padding: 0 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: #ffffff;
+            position: fixed;
+            left: calc(-1 * var(--sidebar-width));
+            top: 0;
+            z-index: 999;
+            transition: all 0.3s ease;
+            box-shadow: 2px 0 15px rgba(0, 0, 0, 0.05);
+            padding-top: 80px;
+        }
+
+        .sidebar.show {
+            left: 0;
+        }
+
+        .main-container {
+            margin-top: 65px;
+            min-height: calc(100vh - 115px);
+            transition: all 0.3s ease;
+            padding: 20px;
+        }
+
+        .main-container.with-sidebar {
+            margin-left: var(--sidebar-width);
+        }
+
+        /* Dashboard Cards */
+        .stat-card {
+            border-radius: 16px;
+            border: none;
+            padding: 1.5rem;
+            color: white;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: var(--card-shadow);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 25px -5px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-card.primary {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+
+        .stat-card.danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .stat-card.warning {
+            background: linear-gradient(135deg, #f1c40f, #f39c12);
+        }
+
+        .stat-card.success {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+        }
+
+        /* Table Design */
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 2rem;
+        }
+
+        .table thead th {
+            background: #f1f5f9;
+            color: #475569;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            padding: 12px;
+        }
+
+        /* Login Screen Upgrade */
+        .login-wrapper {
+            display: flex;
+            height: 100vh;
+            background: white;
+        }
+
+        .login-left {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 5% 10%;
+            background: #ffffff;
+        }
+
+        .login-right {
+            flex: 1.2;
+            background: #f0f7ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .login-right img {
+            width: 80%;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Custom Dropdown in Sidebar */
+        .submenu {
+            list-style: none;
+            padding-left: 1.5rem;
+            display: none;
+            background: #f8fafc;
+        }
+
+        .sidebar-item {
+            padding: 10px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #475569;
+            transition: 0.2s;
+        }
+
+        .sidebar-item:hover {
+            background: #f1f5f9;
+            color: var(--primary);
+        }
+
+        /* Auto-logout Overlay */
+        #logoutWarningAlert {
+            border-radius: 20px;
+            border: none;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+    </style>
+</head>
+
+<body onload="onLoad()">
+
+    <!-- Loader -->
+    <div id="globalLoader">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
+        <p class="mt-3 font-semibold text-slate-500">Preparing your dashboard...</p>
+    </div>
+
+    <!-- Top Navbar -->
+    <header class="navbar flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <button id="burger" onclick="toggleSidebar()" class="text-white text-2xl focus:outline-none">
+                <i class="fas fa-bars"></i>
+            </button>
+            <img id="companyLogo" alt="" style="height:34px;">
+            <h2 id="businessTitle" class="text-white text-xl font-black mb-0 tracking-tight"></h2>
+        </div>
+
+        <div class="flex items-center gap-6">
+            <span id="welcomeMessage" class="hidden md:block text-white/90 text-sm font-medium"></span>
+            <button id="logoutButton" class="btn btn-sm btn-danger px-3 py-2 rounded-lg hidden"
+                onclick="handleLogout()">
+                <i class="fa-solid fa-right-from-bracket mr-2"></i>Logout
+            </button>
+        </div>
+    </header>
+
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar" id="sidebar">
+        <div class="px-6 py-2 text-xs font-bold text-slate-400 uppercase tracking-widest border-b mb-2">Main Menu</div>
+        <div class="sidebar-item" onclick="loadHomePage()">
+            <i class="fas fa-home text-blue-500 w-5"></i> <span>Dashboard</span>
+        </div>
+        <div class="sidebar-item" onclick="loadUserManagement()">
+            <i class="fas fa-users-cog text-emerald-500 w-5"></i> <span>User Management</span>
+        </div>
+        <div class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest border-b mt-4 mb-2">Reports &
+            Tools</div>
+        <div id="dynamicMenuArea">
+            <!-- JS will inject filtered menu here -->
+            <ul class="list-none p-0 m-0" id="sidebarMenuUl"></ul>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="main-container" id="mainContainer" style="display: none;">
+        <!-- Alert system -->
+        <div id="responseMessage"
+            class="alert fixed top-20 left-1/2 -translate-x-1/2 z-[2000] hidden shadow-lg min-w-[300px]" role="alert">
+        </div>
+
+        <!-- Frame view for external links -->
+        <div id="linkContent" class="hidden">
+            <iframe id="linkFrame" class="w-full h-[calc(100vh-140px)] rounded-xl border-0 shadow-sm"></iframe>
+        </div>
+
+        <!-- Dynamic Sheet Content -->
+        <div id="sheetContent"></div>
+    </main>
+
+    <!-- Login Screen -->
+    <div class="login-wrapper" id="loginWrapper">
+        <div class="login-left">
+            <div class="max-w-[420px] w-full mx-auto">
+                <h1 class="text-4xl font-black text-slate-800 mb-2">Sign In</h1>
+                <p class="text-slate-500 mb-8 font-medium">Enter your credentials to access the business panel.</p>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Email Address</label>
+                    <div class="relative">
+                        <i class="fas fa-envelope absolute left-4 top-3.5 text-slate-400"></i>
+                        <input type="email" id="username"
+                            class="form-control pl-11 py-3 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500"
+                            placeholder="user@company.com">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Password</label>
+                    <div class="relative">
+                        <i class="fas fa-lock absolute left-4 top-3.5 text-slate-400"></i>
+                        <input type="password" id="password" class="form-control pl-11 py-3 border-slate-200 rounded-xl"
+                            placeholder="••••••••">
+                        <i class="fas fa-eye absolute right-4 top-3.5 cursor-pointer text-slate-400"
+                            onclick="togglePasswordVisibility()"></i>
+                    </div>
+                </div>
+
+                <div class="mb-8">
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Select Role</label>
+                    <select id="role" class="form-select py-3 border-slate-200 rounded-xl">
+                        <option value="">Choose your role...</option>
+                        <option value="admin">Administrator</option>
+                        <option value="user">Standard User</option>
+                    </select>
+                </div>
+
+                <button
+                    class="btn btn-primary w-full py-3 rounded-xl font-bold text-lg shadow-blue-200 shadow-lg hover:translate-y-[-2px] transition-all"
+                    onclick="handleLogin()" style="background: var(--primary); border:none;">
+                    Login to Dashboard
+                </button>
+            </div>
+        </div>
+        <div class="login-right hidden lg:flex">
+            <img src="https://i.ibb.co/wFwv088Y/online-registration-or-sign-up-login-for-account-on-smartphone-app-user-interface-with-secure-passwo.jpg"
+                alt="Login Graphic">
+        </div>
+    </div>
+
+    <!-- Activity Warning -->
+    <div id="logoutOverlay" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] hidden"></div>
+    <div id="logoutWarningAlert"
+        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-8 w-[400px] z-[10000] hidden text-center">
+        <div
+            class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+            <i class="fas fa-clock"></i>
+        </div>
+        <h3 class="text-xl font-bold mb-2">Session Expiring</h3>
+        <p class="text-slate-500 mb-6">You will be logged out in <span id="logoutCountdown"
+                class="text-red-500 font-bold text-lg">10</span> seconds due to inactivity.</p>
+        <button id="stayLoggedInBtn" class="btn btn-primary w-full py-2 font-bold rounded-lg"
+            style="background: var(--primary); border:none;">Extend Session</button>
+    </div>
+
+    <!-- Footer -->
+    <footer
+        class="bg-white border-t py-3 px-6 fixed bottom-0 w-full z-[1000] flex flex-wrap justify-between items-center text-[11px] text-slate-500">
+        <div class="flex items-center gap-2">
+            <img src="https://drive.google.com/thumbnail?id=1rZ7v-EkFpmgVh0tond3ql4cMzDSivEEv&sz=50"
+                class="w-5 rounded-full">
+            <span>Powered by <a href="https://www.businessautomations.in/" class="font-bold text-slate-800">Business
+                    Automations Solutions LLP</a></span>
+        </div>
+        <div class="flex gap-4 items-center">
+            <a href="tel:+918621893237"><i class="fas fa-phone"></i></a>
+            <a href="mailto:support@businessautomations.in"><i class="fas fa-envelope"></i></a>
+            <div class="h-4 w-px bg-slate-200"></div>
+            <a href="#" class="font-bold">Support</a>
+            <a href="#" class="font-bold">Contact</a>
+        </div>
+    </footer>
+
+    <!-- JS LOGIC -->
+    <script>
+        // State Management
+        let inactivityTimeout, logoutWarningTimeout, countdownInterval;
+        let userName = '', userRole = '', metricsVisible = false;
+
+        function onLoad() {
+            userName = localStorage.getItem('userName');
+            userRole = localStorage.getItem('role');
+            metricsVisible = (localStorage.getItem('metricsVisible') === 'true');
+
+            // Set Brand Info
+            google.script.run.withSuccessHandler(url => document.getElementById('companyLogo').src = url).getCompanyLogo();
+            google.script.run.withSuccessHandler(title => document.getElementById('businessTitle').innerText = title).getBusinessTitle();
+
+            if (userName) {
+                initApp(userName, localStorage.getItem('displayName'));
+            } else {
+                document.getElementById('globalLoader').style.display = 'none';
+            }
+        }
+
+        function initApp(u, displayName) {
+            document.getElementById('loginWrapper').style.display = 'none';
+            document.getElementById('mainContainer').style.display = 'block';
+            document.getElementById('logoutButton').classList.remove('hidden');
+            document.getElementById('welcomeMessage').innerText = `Welcome, ${displayName}`;
+
+            google.script.run.withSuccessHandler(buildSidebar).getMenuStructure(u);
+            loadHomePage();
+            setupInactivityTracking();
+        }
+
+        function handleLogin() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            const r = document.getElementById('role').value;
+            const loader = document.getElementById('globalLoader');
+
+            if (!u || !p || !r) {
+                displayAlert('Please fill all fields', 'danger');
+                return;
+            }
+
+            loader.style.display = 'flex';
+            google.script.run.withSuccessHandler(res => {
+                loader.style.display = 'none';
+                if (res.success) {
+                    localStorage.setItem('userName', u);
+                    localStorage.setItem('role', r);
+                    localStorage.setItem('displayName', res.displayName);
+                    localStorage.setItem('metricsVisible', res.metricsVisible);
+                    initApp(u, res.displayName);
+                    displayAlert('Login Successful!', 'success');
+                } else {
+                    displayAlert('Invalid Credentials', 'danger');
+                }
+            }).checkLogin(u, p, r);
+        }
+
+        function handleLogout() {
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.reload();
+        }
+
+        // Sidebar Builder
+        function buildSidebar(filteredMenu) {
+            const ul = document.getElementById('sidebarMenuUl');
+            ul.innerHTML = '';
+
+            Object.keys(filteredMenu).sort().forEach(mainMenu => {
+                const li = document.createElement('li');
+                li.className = "border-b border-slate-50";
+                li.innerHTML = `
+                    <div class="sidebar-item font-semibold" onclick="toggleSub(this)">
+                        <i class="fas fa-chevron-right text-[10px] transition-transform"></i> ${mainMenu}
+                    </div>
+                    <ul class="submenu list-none p-0 m-0"></ul>
+                `;
+
+                const subUl = li.querySelector('.submenu');
+                filteredMenu[mainMenu].forEach(item => {
+                    const subLi = document.createElement('li');
+                    subLi.className = "px-10 py-2 text-sm text-slate-500 hover:text-blue-600 cursor-pointer transition-colors";
+                    subLi.innerText = item.subMenu;
+                    subLi.onclick = (e) => {
+                        e.stopPropagation();
+                        loadSheet(item.sheetName, item.externalId, item.subMenu, item.rangeSpec, userName, item.dbLink, item.buttons, item.accessType);
+                    };
+                    subUl.appendChild(subLi);
+                });
+                ul.appendChild(li);
+            });
+        }
+
+        function toggleSub(el) {
+            const sub = el.nextElementSibling;
+            const icon = el.querySelector('.fa-chevron-right');
+            const isOpen = sub.style.display === 'block';
+            sub.style.display = isOpen ? 'none' : 'block';
+            icon.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
+        }
+
+        // Dashboard Handler
+        function loadHomePage() {
+            const content = document.getElementById('sheetContent');
+            const metricsVisible = (localStorage.getItem('metricsVisible') === 'true');
+
+            content.innerHTML = `
+                <div class="container-fluid">
+                    <div class="row g-4 mb-5 mt-2">
+                        <div class="col-md-3"><div class="stat-card primary"><h6>Total Tasks</h6><h2 id="total-tasks">...</h2><i class="fas fa-list absolute -bottom-2 -right-2 text-6xl opacity-10"></i></div></div>
+                        <div class="col-md-3"><div class="stat-card danger"><h6>Overdue</h6><h2 id="overdue-tasks">...</h2><i class="fas fa-exclamation-circle absolute -bottom-2 -right-2 text-6xl opacity-10"></i></div></div>
+                        <div class="col-md-3"><div class="stat-card warning"><h6>Upcoming</h6><h2 id="upcoming-tasks">...</h2><i class="fas fa-calendar absolute -bottom-2 -right-2 text-6xl opacity-10"></i></div></div>
+                        <div class="col-md-3"><div class="stat-card success"><h6>Today</h6><h2 id="today-tasks">...</h2><i class="fas fa-check-circle absolute -bottom-2 -right-2 text-6xl opacity-10"></i></div></div>
+                    </div>
+                    
+                    <div class="table-container">
+                        <div class="flex justify-between items-center mb-4 px-2">
+                            <h5 class="font-black text-slate-800 m-0">Process Task Details</h5>
+                            <div class="flex gap-2">
+                                <input type="date" id="startDate" class="form-control form-control-sm border-slate-200">
+                                <input type="date" id="endDate" class="form-control form-control-sm border-slate-200">
+                                <button onclick="refreshHomeData()" class="btn btn-sm btn-primary px-3">Filter</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive max-h-[500px]">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Task Name</th><th>Doer</th><th>Process</th><th>Planned</th><th>Done</th><th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="data-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    ${metricsVisible ? `
+                    <div class="row g-4">
+                        <div class="col-lg-6"><div class="table-container"><div id="chart_1" style="height: 300px;"></div></div></div>
+                        <div class="col-lg-6"><div class="table-container"><div id="chart_2" style="height: 300px;"></div></div></div>
+                    </div>` : ''}
+                </div>
+            `;
+
+            refreshHomeData();
+        }
+
+        function refreshHomeData() {
+            document.getElementById('globalLoader').style.display = 'flex';
+            google.script.run.withSuccessHandler(data => {
+                const tbody = document.getElementById('data-table');
+                const role = localStorage.getItem('role');
+                const user = localStorage.getItem('userName');
+
+                // Filter data based on role
+                let filtered = data.slice(1);
+                if (role === 'user') filtered = filtered.filter(r => r[0] === user);
+
+                // Populate Stats
+                document.getElementById('total-tasks').innerText = filtered.length;
+                document.getElementById('overdue-tasks').innerText = filtered.filter(r => r[6] === 'Over Due').length;
+                document.getElementById('upcoming-tasks').innerText = filtered.filter(r => r[6] === 'Up-Comming').length;
+                document.getElementById('today-tasks').innerText = filtered.filter(r => r[6] === 'Today').length;
+
+                // Populate Table
+                tbody.innerHTML = filtered.map(r => `
+                    <tr>
+                        <td class="font-semibold text-slate-700">${r[4]}</td>
+                        <td>${r[1]}</td>
+                        <td><span class="badge bg-slate-100 text-slate-600">${r[2]}</span></td>
+                        <td>${r[3]}</td>
+                        <td><a href="${r[5]}" target="_blank" class="text-blue-500"><i class="fas fa-external-link-alt"></i></a></td>
+                        <td><span class="px-2 py-1 rounded text-[10px] font-bold uppercase ${r[6] === 'Over Due' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}">${r[6]}</span></td>
+                    </tr>
+                `).join('');
+
+                if (localStorage.getItem('metricsVisible') === 'true') drawCharts(filtered);
+                document.getElementById('globalLoader').style.display = 'none';
+            }).getSheetData2();
+        }
+
+        // Charts
+        function drawCharts(data) {
+            google.charts.load('current', { 'packages': ['corechart'] });
+            google.charts.setOnLoadCallback(() => {
+                const statusMap = {};
+                data.forEach(r => statusMap[r[6]] = (statusMap[r[6]] || 0) + 1);
+
+                const chartData = [['Status', 'Count'], ...Object.entries(statusMap)];
+                const dataTable = google.visualization.arrayToDataTable(chartData);
+
+                new google.visualization.PieChart(document.getElementById('chart_1')).draw(dataTable, {
+                    title: 'Task Status Distribution',
+                    pieHole: 0.4,
+                    colors: ['#e74c3c', '#2ecc71', '#f1c40f', '#3498db']
+                });
+            });
+        }
+
+        // Inactivity Logic
+        function setupInactivityTracking() {
+            const reset = () => {
+                clearTimeout(inactivityTimeout);
+                clearTimeout(logoutWarningTimeout);
+                clearInterval(countdownInterval);
+                document.getElementById('logoutOverlay').style.display = 'none';
+                document.getElementById('logoutWarningAlert').style.display = 'none';
+
+                inactivityTimeout = setTimeout(() => {
+                    document.getElementById('logoutOverlay').style.display = 'block';
+                    document.getElementById('logoutWarningAlert').style.display = 'block';
+                    let sec = 10;
+                    countdownInterval = setInterval(() => {
+                        document.getElementById('logoutCountdown').innerText = --sec;
+                        if (sec <= 0) handleLogout();
+                    }, 1000);
+                }, 10 * 60 * 1000 - 10000);
+            };
+
+            ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(e => document.addEventListener(e, reset));
+            document.getElementById('stayLoggedInBtn').onclick = reset;
+            reset();
+        }
+
+        // UI Helpers
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('show');
+            document.getElementById('mainContainer').classList.toggle('with-sidebar');
+        }
+
+        function displayAlert(msg, type) {
+            const el = document.getElementById('responseMessage');
+            el.innerText = msg;
+            el.className = `alert alert-${type} fixed top-20 show block`;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 3000);
+        }
+
+        function togglePasswordVisibility() {
+            const p = document.getElementById('password');
+            p.type = p.type === 'password' ? 'text' : 'password';
+        }
+
+        // The loadSheet function would go here, maintaining your original logic for iframe vs sheet content.
+        function loadSheet(sheetName, extId, subName, range, u, link, buttons, access) {
+            const frame = document.getElementById('linkFrame');
+            const linkArea = document.getElementById('linkContent');
+            const sheetArea = document.getElementById('sheetContent');
+
+            if (link && link.trim() !== '') {
+                linkArea.classList.remove('hidden');
+                sheetArea.classList.add('hidden');
+                frame.src = link;
+            } else {
+                linkArea.classList.add('hidden');
+                sheetArea.classList.remove('hidden');
+                document.getElementById('globalLoader').style.display = 'flex';
+                google.script.run.withSuccessHandler(html => {
+                    sheetArea.innerHTML = html;
+                    document.getElementById('globalLoader').style.display = 'none';
+                    // Re-run internal scripts if any
+                    const scripts = sheetArea.querySelectorAll("script");
+                    scripts.forEach(s => eval(s.innerHTML));
+                }).getParamHtml(sheetName, subName, extId, range, u, userRole, buttons, access);
+            }
+        }
+
+    </script>
+</body>
+
+</html>

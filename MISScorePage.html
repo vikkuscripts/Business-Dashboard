@@ -1,0 +1,1665 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <base target="_top">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined">
+    <style>
+        :root {
+            --primary-color: #1A7499;
+            --card-shadow: 0 6px 18px rgba(16, 24, 40, 0.08);
+        }
+
+        #misContainer {
+            margin-top: 24px;
+            padding: 20px;
+        }
+
+        .mis-table-container {
+            max-height: calc(100vh - 220px);
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            position: relative;
+        }
+
+        .mis-table {
+            width: 100%;
+            margin-bottom: 0;
+        }
+
+        .mis-table th {
+            background-color: var(--primary-color, #1A7499) !important;
+            color: white;
+            font-weight: bold;
+            position: sticky;
+            z-index: 10;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            text-align: center;
+        }
+
+        /* First row headers */
+        .mis-table thead tr:first-child th {
+            top: 0;
+            z-index: 12;
+        }
+
+        /* Second row headers */
+        .mis-table thead tr:nth-child(2) th {
+            top: 40px;
+            /* Adjust based on your first row height */
+            z-index: 11;
+        }
+
+        .mis-table td {
+            border: 1px solid #dee2e6;
+            padding: 8px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .section-header {
+            background-color: #2c5f8a !important;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        /* Rest of your existing CSS remains the same */
+        .commitment-input {
+            width: 80px;
+            text-align: center;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 4px;
+        }
+
+        .view-btn {
+            background-color: var(--primary-color, #1A7499);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .view-btn:hover {
+            filter: brightness(0.95);
+        }
+
+        .save-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: none;
+        }
+
+        .save-btn:hover {
+            background-color: #218838;
+        }
+
+        .filter-section {
+            background: #fff;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
+            box-shadow: var(--card-shadow);
+        }
+
+        .week-dropdown {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color, #1A7499);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .page-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            width: 90%;
+            max-width: 1000px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-header {
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #777;
+        }
+
+        .close-modal:hover {
+            color: #333;
+        }
+
+        .process-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .process-table th {
+            background-color: var(--primary-color, #1A7499);
+            color: white;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+        }
+
+        .process-table td {
+            padding: 8px;
+            border: 1px solid #dee2e6;
+            text-align: center;
+        }
+
+        #delegationTableLoadingOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .delegation-page-input {
+            width: 70px;
+            text-align: center;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 4px;
+        }
+
+        .delegation-page-input:disabled {
+            background-color: #f8f9fa;
+            color: #6c757d;
+        }
+
+        .nav-tabs .nav-link {
+            color: #1A7499;
+            font-weight: bold;
+        }
+
+        .nav-tabs .nav-link.active {
+            background-color: #1A7499;
+            color: white;
+            border-color: #1A7499;
+        }
+
+        .nav-tabs .nav-link:hover {
+            border-color: #1A7499;
+            color: #1A7499;
+        }
+
+        .tab-content {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="pageLoadingOverlay" class="page-loading">
+        <div class="loading-spinner"></div>
+    </div>
+    <div id="misContainer">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <h2 class="text-center mb-4" style="color: #1A7499; font-weight: bold;">Score Management</h2>
+                    <hr style="height: 3px; background-color: #1A7499; border: none;" />
+                </div>
+            </div>
+            <!-- Tab Navigation -->
+            <div class="row">
+                <div class="col-12">
+                    <ul class="nav nav-tabs mb-3" id="misPageTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="mis-page-tab" data-bs-toggle="tab"
+                                data-bs-target="#mis-page-tab-pane" type="button" role="tab"
+                                aria-controls="mis-page-tab-pane" aria-selected="true"
+                                onclick="switchMisPageTab('mis')">MIS Score</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="delegation-page-tab" data-bs-toggle="tab"
+                                data-bs-target="#delegation-page-tab-pane" type="button" role="tab"
+                                aria-controls="delegation-page-tab-pane" aria-selected="false"
+                                onclick="switchMisPageTab('delegation')">Delegation</button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <!-- Common Filters -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="filter-section">
+                        <div class="row align-items-end">
+                            <div class="col-md-2">
+                                <label for="startDate" class="form-label">Start Date:</label>
+                                <input type="date" id="startDate" class="form-control">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="endDate" class="form-label">End Date:</label>
+                                <input type="date" id="endDate" class="form-control" readonly>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="weekNumber" class="form-label">Week Number:</label>
+                                <select id="weekNumber" class="form-select week-dropdown">
+                                    <option value="">Loading weeks...</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2" id="userFilterContainer" style="display: none;">
+                                <label for="userFilter" class="form-label">Users:</label>
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button"
+                                        id="userFilterBtn" data-bs-toggle="dropdown" aria-expanded="false"
+                                        style="text-align: left; font-size: 12px;">
+                                        All Users
+                                    </button>
+                                    <div class="dropdown-menu w-100 p-2" aria-labelledby="userFilterBtn"
+                                        id="userDropdown" style="max-height: 300px; overflow-y: auto;">
+                                        <input type="text" class="form-control mb-2" id="userSearch"
+                                            placeholder="Search users..." style="font-size: 12px;">
+                                        <div id="userCheckboxes">
+                                            <!-- User checkboxes will be populated here -->
+                                        </div>
+                                        <hr class="my-2">
+                                        <button type="button" class="btn btn-sm btn-outline-primary me-1"
+                                            onclick="selectAllUsers()" style="font-size: 10px;">Select All</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                            onclick="clearAllUsers()" style="font-size: 10px;">Clear All</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">&nbsp;</label> <!-- Empty label for alignment -->
+                                <div class="d-flex gap-2">
+                                    <button id="saveBtn" class="save-btn">Save Changes</button>
+                                    <button id="resetMisPageBtn" class="btn btn-secondary"
+                                        style="background-color: #6c757d; border-color: #6c757d;">Reset</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Tab Content -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="tab-content" id="misPageTabContent">
+                        <!-- MIS Score Tab -->
+                        <div class="tab-pane fade show active" id="mis-page-tab-pane" role="tabpanel"
+                            aria-labelledby="mis-page-tab">
+                            <div class="mis-table-container">
+                                <div id="tableLoadingOverlay" class="loading-overlay">
+                                    <div class="loading-spinner"></div>
+                                </div>
+                                <table class="table table-bordered mis-table">
+                                    <thead>
+                                        <tr>
+                                            <th rowspan="2" style="vertical-align: middle;">User ID</th>
+                                            <th rowspan="2" style="vertical-align: middle;">Name</th>
+                                            <th colspan="5" class="section-header">Work Not Done</th>
+                                            <th colspan="5" class="section-header">Work Done on Time</th>
+                                            <th rowspan="2" style="vertical-align: middle;">Action</th>
+                                        </tr>
+                                        <tr>
+                                            <th style="vertical-align: middle; text-align: center;">Current Week
+                                                <br>Score(WND)</th>
+                                            <th style="vertical-align: middle; text-align: center;">Total Task</th>
+                                            <th style="vertical-align: middle; text-align: center;">Total Completed
+                                                <br>Task</th>
+                                            <th style="vertical-align: middle; text-align: center;">Score</th>
+                                            <th style="vertical-align: middle; text-align: center;">Next
+                                                Commitment<br>(Work not done)</th>
+                                            <th style="vertical-align: middle; text-align: center;">Current
+                                                Week<br>Score(WND-OT)</th>
+                                            <th style="vertical-align: middle; text-align: center;">Total
+                                                Complete<br>Task</th>
+                                            <th style="vertical-align: middle; text-align: center;">On Time Done<br>Task
+                                            </th>
+                                            <th style="vertical-align: middle; text-align: center;">Score</th>
+                                            <th style="vertical-align: middle; text-align: center;">Next
+                                                Commitment<br>(Work Done on Time)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="misTableBody">
+                                        <tr>
+                                            <td colspan="12" class="text-center">Loading...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <!-- Delegation Tab -->
+                        <div class="tab-pane fade" id="delegation-page-tab-pane" role="tabpanel"
+                            aria-labelledby="delegation-page-tab">
+                            <div class="mis-table-container">
+                                <div id="delegationTableLoadingOverlay" class="loading-overlay">
+                                    <div class="loading-spinner"></div>
+                                </div>
+                                <table class="table table-bordered mis-table">
+                                    <thead>
+                                        <tr>
+                                            <th rowspan="2" style="vertical-align: middle;">Email</th>
+                                            <th rowspan="2" style="vertical-align: middle;">Name</th>
+                                            <th colspan="3" class="section-header">Current Planned</th>
+                                            <th colspan="3" class="section-header">Current Score</th>
+                                            <th colspan="4" class="section-header">Total Task Details</th>
+                                            <th colspan="3" class="section-header">Next Committed</th>
+                                        </tr>
+                                        <tr>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #dc3545 !important; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Red Score</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #ffc107 !important; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Yellow Score</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #28a745 !important; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Green Score</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #dc3545 !important; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Red Score</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #ffc107 !important; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Yellow Score</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #28a745 !important; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Green Score</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #1A7499; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Total Task</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #1A7499; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Completed Task</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #1A7499; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Pending Task</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #1A7499; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Shifted Task</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #dc3545 !important; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Red Score</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #ffc107 !important; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Yellow Score</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #28a745 !important; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Green Score</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="delegationPageTableBody">
+                                        <tr>
+                                            <td colspan="15" class="text-center">Loading...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="processModal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeProcessModal()">&times;</button>
+            <div class="modal-header">
+                <h4 id="modalTitle">Process Details</h4>
+                <p id="modalSubtitle" class="text-muted mb-0"></p>
+            </div>
+            <div id="processTableContainer">
+                <!-- Process table will be populated here -->
+            </div>
+        </div>
+    </div>
+    <script>
+        var userName = <?!= JSON.stringify(userName) ?>;
+        var userRole = <?!= JSON.stringify(role) ?>;
+        var currentMisData = [];
+        var hasUnsavedChanges = false;
+        var isInitialized = false;
+
+        // Global initialization function that will be called from main.html
+        window.initializeMISPage = function () {
+            if (isInitialized) return;
+            isInitialized = true;
+
+            console.log('Initializing MIS Page...');
+            showPageLoading();
+            setupEventListeners();
+
+            // Add a small delay to ensure Google Apps Script context is ready
+            setTimeout(function () {
+                loadAvailableWeeks();
+            }, 250);
+        };
+
+        // Add these variables at the top of the script section
+        var currentMisPageTab = 'mis';
+        var currentDelegationPageData = [];
+        var hasDelegationPageUnsavedChanges = false;
+
+        // Make the function globally available
+        function switchMisPageTab(tabName) {
+            console.log('Switching to tab:', tabName);
+            currentMisPageTab = tabName;
+            if (tabName === 'mis') {
+                loadMisData();
+            } else if (tabName === 'delegation') {
+                loadDelegationPageData();
+            }
+        }
+
+        // Make it globally available
+        window.switchMisPageTab = switchMisPageTab;
+
+        function loadDelegationPageData() {
+            console.log('Loading delegation page data...');
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            if (!startDate || !endDate) {
+                const tbody = document.getElementById('delegationPageTableBody');
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="15" class="text-center">Please select a date range to view delegation data</td></tr>';
+                }
+                return;
+            }
+
+            showDelegationTableLoading();
+
+            google.script.run
+                .withSuccessHandler(function (result) {
+                    console.log('Delegation data loaded:', result);
+                    hideDelegationTableLoading();
+                    if (result.success) {
+                        currentDelegationPageData = result.data;
+                        renderDelegationPageTable(result.data);
+                    } else {
+                        showError(result.error);
+                        renderDelegationPageTable([]);
+                    }
+                })
+                .withFailureHandler(function (error) {
+                    console.error('Error loading delegation data:', error);
+                    hideDelegationTableLoading();
+                    showError('Error loading delegation data: ' + error);
+                    renderDelegationPageTable([]);
+                })
+                .calculateDelegationScores(userName, userRole, startDate, endDate);
+        }
+
+        function renderDelegationPageTable(data) {
+            const tbody = document.getElementById('delegationPageTableBody');
+            if (!tbody) {
+                console.error('delegationPageTableBody element not found');
+                return;
+            }
+
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="15" class="text-center">No delegation data found for selected date range</td></tr>';
+                return;
+            }
+
+            // Setup user filter if more than 1 user (reuse existing function but adapt for delegation)
+            setupUserFilter(data);
+
+            // Apply user filter and render
+            renderFilteredDelegationPageTable(data);
+
+            // Reset unsaved changes flag when new data is loaded
+            hasDelegationPageUnsavedChanges = false;
+            const saveBtn = document.getElementById('saveBtn');
+            if (saveBtn) {
+                saveBtn.style.display = 'none';
+            }
+        }
+
+        function renderFilteredDelegationPageTable(data) {
+            const filteredData = applyUserFilter(data);
+            const tbody = document.getElementById('delegationPageTableBody');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+
+            const canEdit = (userRole === 'admin');
+
+            filteredData.forEach(function (row) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.userId}</td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.name}</td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #ffebee;">${row.currentPlannedRed}</td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #fff8e1;">${row.currentPlannedYellow}</td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #e8f5e8;">${row.currentPlannedGreen}</td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #ffebee;">
+                        <div>${row.currentScoreRedCount || 0}</div>
+                        <div style="font-size: 11px; color: #666;">(${row.currentScoreRed}%)</div>
+                      </td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #fff8e1;">
+                        <div>${row.currentScoreYellowCount || 0}</div>
+                        <div style="font-size: 11px; color: #666;">(${row.currentScoreYellow}%)</div>
+                      </td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #e8f5e8;">
+                        <div>${row.currentScoreGreenCount || 0}</div>
+                        <div style="font-size: 11px; color: #666;">(${row.currentScoreGreen}%)</div>
+                      </td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.totalTasks}</td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.completedTasks}</td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.pendingTasks}</td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.shiftedTasks}</td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #ffebee;">
+                          <input type="number" class="commitment-input delegation-page-input" data-user="${row.userId}" data-type="red" value="${row.nextCommittedRed || ''}" onchange="markDelegationPageUnsaved()" ${!canEdit ? 'disabled' : ''} style="width: 70px; text-align: center; border: 1px solid #ccc; border-radius: 4px; padding: 4px;">
+                      </td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #fff8e1;">
+                          <input type="number" class="commitment-input delegation-page-input" data-user="${row.userId}" data-type="yellow" value="${row.nextCommittedYellow || ''}" onchange="markDelegationPageUnsaved()" ${!canEdit ? 'disabled' : ''} style="width: 70px; text-align: center; border: 1px solid #ccc; border-radius: 4px; padding: 4px;">
+                      </td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #e8f5e8;">
+                          <input type="number" class="commitment-input delegation-page-input" data-user="${row.userId}" data-type="green" value="${row.nextCommittedGreen || ''}" onchange="markDelegationPageUnsaved()" ${!canEdit ? 'disabled' : ''} style="width: 70px; text-align: center; border: 1px solid #ccc; border-radius: 4px; padding: 4px;">
+                      </td>
+                  `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function showDelegationTableLoading() {
+            const loadingOverlay = document.getElementById('delegationTableLoadingOverlay');
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'flex';
+            }
+        }
+
+        function hideDelegationTableLoading() {
+            const loadingOverlay = document.getElementById('delegationTableLoadingOverlay');
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        function markDelegationPageUnsaved() {
+            hasDelegationPageUnsavedChanges = true;
+            const saveBtn = document.getElementById('saveBtn');
+            if (saveBtn) {
+                saveBtn.style.display = 'block';
+            }
+            console.log('Marked delegation page as unsaved'); // For debugging
+        }
+
+        // Make it globally available
+        window.markDelegationPageUnsaved = markDelegationPageUnsaved;
+
+        // Update the loadCurrentTabData function
+        function loadCurrentTabData() {
+            console.log('Loading current tab data for:', currentMisPageTab);
+            if (currentMisPageTab === 'mis') {
+                loadMisData();
+            } else if (currentMisPageTab === 'delegation') {
+                loadDelegationPageData();
+            }
+        }
+
+        function saveMisChanges() {
+            if (!hasUnsavedChanges) return;
+
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const weekSelect = document.getElementById('weekNumber');
+            const weekNumber = weekSelect.value || getCurrentWeekNumber(startDate);
+
+            if (!weekNumber) {
+                showError('Please select a valid week number');
+                return;
+            }
+
+            const commitmentInputs = document.querySelectorAll('.commitment-input:not(.delegation-page-input):not([disabled])');
+            const commitments = {};
+
+            commitmentInputs.forEach(function (input) {
+                const userId = input.dataset.user;
+                const type = input.dataset.type;
+                const value = input.value ? input.value.trim() : '';
+
+                if (value !== '') {
+                    if (!commitments[userId]) {
+                        commitments[userId] = { wnd: '', wndot: '' };
+                    }
+                    commitments[userId][type] = value;
+                }
+            });
+
+            if (Object.keys(commitments).length === 0) {
+                showError('No commitments to save - please enter values before saving');
+                hasUnsavedChanges = false;
+                const saveBtn = document.getElementById('saveBtn');
+                if (saveBtn) {
+                    saveBtn.style.display = 'none';
+                }
+                return;
+            }
+
+            showTableLoading();
+
+            let saveCount = 0;
+            const totalSaves = Object.keys(commitments).length;
+            let hasError = false;
+
+            function saveNext() {
+                const userIds = Object.keys(commitments);
+                if (saveCount >= totalSaves || hasError) {
+                    hideTableLoading();
+                    if (!hasError) {
+                        hasUnsavedChanges = false;
+                        const saveBtn = document.getElementById('saveBtn');
+                        if (saveBtn) {
+                            saveBtn.style.display = 'none';
+                        }
+                        showSuccess('All MIS commitments saved successfully');
+                        loadMisData();
+                    }
+                    return;
+                }
+
+                const userId = userIds[saveCount];
+                const wndCommitment = commitments[userId].wnd || '';
+                const wndotCommitment = commitments[userId].wndot || '';
+
+                google.script.run
+                    .withSuccessHandler(function () {
+                        saveCount++;
+                        saveNext();
+                    })
+                    .withFailureHandler(function (error) {
+                        hasError = true;
+                        hideTableLoading();
+                        showError('Error saving MIS commitments: ' + error);
+                    })
+                    .saveWorkCommitments(userId, weekNumber, startDate, endDate, wndCommitment, wndotCommitment);
+            }
+
+            saveNext();
+        }
+
+        function saveDelegationPageChanges() {
+            console.log('saveDelegationPageChanges called');
+
+            if (!hasDelegationPageUnsavedChanges) {
+                console.log('No delegation unsaved changes, returning');
+                return;
+            }
+
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const weekSelect = document.getElementById('weekNumber');
+            const weekNumber = weekSelect.value || getCurrentWeekNumber(startDate);
+
+            console.log('Delegation save - dates:', startDate, endDate, 'week:', weekNumber);
+
+            if (!weekNumber) {
+                showError('Please select a valid week number');
+                return;
+            }
+
+            const commitmentInputs = document.querySelectorAll('.delegation-page-input:not([disabled])');
+            console.log('Found delegation inputs:', commitmentInputs.length);
+
+            const commitments = {};
+
+            commitmentInputs.forEach(function (input) {
+                const userId = input.dataset.user;
+                const type = input.dataset.type;
+                const value = input.value ? input.value.trim() : '';
+
+                console.log('Processing input - User:', userId, 'Type:', type, 'Value:', value);
+
+                if (value !== '') {
+                    if (!commitments[userId]) {
+                        commitments[userId] = { red: '', yellow: '', green: '' };
+                    }
+                    commitments[userId][type] = value;
+                }
+            });
+
+            console.log('Final commitments object:', commitments);
+
+            if (Object.keys(commitments).length === 0) {
+                showError('No delegation commitments to save - please enter values before saving');
+                hasDelegationPageUnsavedChanges = false;
+                const saveBtn = document.getElementById('saveBtn');
+                if (saveBtn) {
+                    saveBtn.style.display = 'none';
+                }
+                return;
+            }
+
+            showDelegationTableLoading();
+
+            let saveCount = 0;
+            const totalSaves = Object.keys(commitments).length;
+            let hasError = false;
+
+            function saveNext() {
+                const userIds = Object.keys(commitments);
+                if (saveCount >= totalSaves || hasError) {
+                    hideDelegationTableLoading();
+                    if (!hasError) {
+                        hasDelegationPageUnsavedChanges = false;
+                        const saveBtn = document.getElementById('saveBtn');
+                        if (saveBtn) {
+                            saveBtn.style.display = 'none';
+                        }
+                        showSuccess('All delegation commitments saved successfully');
+                        loadDelegationPageData();
+                    }
+                    return;
+                }
+
+                const userId = userIds[saveCount];
+                const redCommitment = commitments[userId].red || '';
+                const yellowCommitment = commitments[userId].yellow || '';
+                const greenCommitment = commitments[userId].green || '';
+
+                console.log('Calling saveDelegationWorkCommitments for user:', userId, 'with commitments:', redCommitment, yellowCommitment, greenCommitment);
+
+                google.script.run
+                    .withSuccessHandler(function (result) {
+                        console.log('Save success for user:', userId, 'Result:', result);
+                        saveCount++;
+                        saveNext();
+                    })
+                    .withFailureHandler(function (error) {
+                        console.error('Save error for user:', userId, 'Error:', error);
+                        hasError = true;
+                        hideDelegationTableLoading();
+                        showError('Error saving delegation commitments: ' + error);
+                    })
+                    .saveDelegationWorkCommitments(userId, weekNumber, startDate, endDate, redCommitment, yellowCommitment, greenCommitment);
+            }
+
+            saveNext();
+        }
+
+        // Alternative initialization if called normally
+        document.addEventListener('DOMContentLoaded', function () {
+            if (!isInitialized) {
+                window.initializeMISPage();
+            }
+        });
+
+        function showPageLoading() {
+            const loadingOverlay = document.getElementById('pageLoadingOverlay');
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'flex';
+            }
+        }
+
+        function hidePageLoading() {
+            const loadingOverlay = document.getElementById('pageLoadingOverlay');
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        function showTableLoading() {
+            const tableLoading = document.getElementById('tableLoadingOverlay');
+            if (tableLoading) {
+                tableLoading.style.display = 'flex';
+            }
+        }
+
+        function hideTableLoading() {
+            const tableLoading = document.getElementById('tableLoadingOverlay');
+            if (tableLoading) {
+                tableLoading.style.display = 'none';
+            }
+        }
+
+        function setupEventListeners() {
+            console.log('Setting up event listeners...');
+
+            const startDateInput = document.getElementById('startDate');
+            const weekSelect = document.getElementById('weekNumber');
+            const saveBtn = document.getElementById('saveBtn');
+
+            if (startDateInput) {
+                startDateInput.addEventListener('change', function () {
+                    console.log('Start date changed:', this.value);
+                    updateEndDate();
+                    updateWeekSelection();
+                    loadCurrentTabData();
+                });
+            }
+
+            if (weekSelect) {
+                weekSelect.addEventListener('change', function () {
+                    console.log('Week changed:', this.value);
+                    updateDatesFromWeek();
+                    loadCurrentTabData();
+                });
+            }
+
+            if (saveBtn) {
+                saveBtn.addEventListener('click', function () {
+                    console.log('Save button clicked, current tab:', currentMisPageTab);
+                    console.log('Has delegation unsaved changes:', hasDelegationPageUnsavedChanges);
+                    console.log('Has MIS unsaved changes:', hasUnsavedChanges);
+                    saveAllChanges();
+                });
+            }
+
+            // Add reset button event listener
+            const resetMisPageBtn = document.getElementById('resetMisPageBtn');
+            if (resetMisPageBtn) {
+                resetMisPageBtn.addEventListener('click', resetMisPageFilters);
+            }
+        }
+
+        function resetMisPageFilters() {
+            console.log('Resetting MIS page filters to current week...');
+
+            // Calculate current Monday
+            const today = new Date();
+            const mondayOfCurrentWeek = new Date(today);
+            const dayOfWeek = today.getDay();
+            const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            mondayOfCurrentWeek.setDate(today.getDate() + mondayOffset);
+
+            // Set dates
+            const startDateStr = mondayOfCurrentWeek.toISOString().split('T')[0];
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+
+            if (startDateInput) {
+                startDateInput.value = startDateStr;
+                updateEndDate();
+                updateWeekSelection();
+            }
+
+            // Reset user filters to all selected
+            const userCheckboxes = document.querySelectorAll('.user-checkbox');
+            if (userCheckboxes.length > 0) {
+                selectAllUsers();
+            }
+
+            // Hide user filter if only one user
+            const userFilterContainer = document.getElementById('userFilterContainer');
+            if (userFilterContainer && userCheckboxes.length <= 1) {
+                userFilterContainer.style.display = 'none';
+            }
+
+            // Reset unsaved changes flags
+            hasUnsavedChanges = false;
+            hasDelegationPageUnsavedChanges = false;
+            const saveBtn = document.getElementById('saveBtn');
+            if (saveBtn) {
+                saveBtn.style.display = 'none';
+            }
+
+            // Load data for current tab
+            setTimeout(function () {
+                loadCurrentTabData();
+            }, 100);
+
+            console.log('MIS page filters reset to current week:', startDateStr);
+        }
+
+        function loadAvailableWeeks() {
+            console.log('Loading available weeks...');
+
+            if (typeof google === 'undefined' || !google.script || !google.script.run) {
+                console.error('Google Apps Script context not available, retrying...');
+                setTimeout(loadAvailableWeeks, 500);
+                return;
+            }
+
+            google.script.run
+                .withSuccessHandler(function (weeks) {
+                    console.log('Weeks loaded successfully:', weeks);
+
+                    const weekSelect = document.getElementById('weekNumber');
+                    if (!weekSelect) {
+                        console.error('Week select element not found');
+                        return;
+                    }
+
+                    weekSelect.innerHTML = '<option value="">Select Week...</option>';
+
+                    if (weeks && weeks.length > 0) {
+                        weeks.forEach(function (week) {
+                            const option = document.createElement('option');
+                            option.value = week.weekNumber;
+                            option.textContent = week.label;
+                            option.dataset.startDate = week.startDate;
+                            option.dataset.endDate = week.endDate;
+                            weekSelect.appendChild(option);
+                        });
+
+                        console.log('Weeks populated, setting default dates');
+                        setDefaultDates();
+                    } else {
+                        console.log('No weeks available');
+                        weekSelect.innerHTML = '<option value="">No weeks available</option>';
+                        setDefaultDates();
+                    }
+
+                    hidePageLoading();
+                })
+                .withFailureHandler(function (error) {
+                    console.error('Error loading weeks:', error);
+
+                    const weekSelect = document.getElementById('weekNumber');
+                    if (weekSelect) {
+                        weekSelect.innerHTML = '<option value="">Error loading weeks</option>';
+                    }
+
+                    setDefaultDates();
+                    hidePageLoading();
+                })
+                .getAvailableWeeks();
+        }
+
+        function setDefaultDates() {
+            console.log('Setting default dates...');
+
+            const today = new Date();
+            const mondayOfCurrentWeek = new Date(today);
+            const dayOfWeek = today.getDay();
+            const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            mondayOfCurrentWeek.setDate(today.getDate() + mondayOffset);
+
+            const startDateStr = mondayOfCurrentWeek.toISOString().split('T')[0];
+            const startDateInput = document.getElementById('startDate');
+
+            if (startDateInput) {
+                startDateInput.value = startDateStr;
+                console.log('Start date set to:', startDateStr);
+
+                updateEndDate();
+                updateWeekSelection();
+
+                setTimeout(function () {
+                    loadMisData();
+                }, 100);
+            }
+        }
+
+        function updateEndDate() {
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+
+            if (!startDateInput || !endDateInput) return;
+
+            const startDate = startDateInput.value;
+            console.log('Updating end date for start date:', startDate);
+
+            if (startDate) {
+                const endDate = new Date(startDate);
+                endDate.setDate(endDate.getDate() + 6);
+                const endDateStr = endDate.toISOString().split('T')[0];
+                endDateInput.value = endDateStr;
+                console.log('End date set to:', endDateStr);
+            }
+        }
+
+        function updateWeekSelection() {
+            const startDateInput = document.getElementById('startDate');
+            const weekSelect = document.getElementById('weekNumber');
+
+            if (!startDateInput || !weekSelect) return;
+
+            const startDate = startDateInput.value;
+            console.log('Updating week selection for start date:', startDate);
+
+            if (!startDate) return;
+
+            const options = weekSelect.querySelectorAll('option');
+
+            for (let option of options) {
+                if (option.dataset.startDate === startDate) {
+                    weekSelect.value = option.value;
+                    console.log('Week selected:', option.value);
+                    break;
+                }
+            }
+        }
+
+        function updateDatesFromWeek() {
+            const weekSelect = document.getElementById('weekNumber');
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+
+            if (!weekSelect || !startDateInput || !endDateInput) return;
+
+            const selectedOption = weekSelect.options[weekSelect.selectedIndex];
+
+            if (selectedOption && selectedOption.dataset.startDate) {
+                const startDate = selectedOption.dataset.startDate;
+                const endDate = selectedOption.dataset.endDate;
+
+                startDateInput.value = startDate;
+                endDateInput.value = endDate;
+
+                console.log('MIS Page dates updated from week - Start:', startDate, 'End:', endDate);
+            }
+        }
+
+        function loadMisData() {
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+
+            if (!startDateInput || !endDateInput) return;
+
+            const startDate = startDateInput.value;
+            const endDate = endDateInput.value;
+
+            console.log('Loading MIS data for:', startDate, 'to', endDate);
+
+            if (!startDate || !endDate) {
+                const tbody = document.getElementById('misTableBody');
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="12" class="text-center">Please select a date range to view data</td></tr>';
+                }
+                return;
+            }
+
+            showTableLoading();
+
+            google.script.run
+                .withSuccessHandler(function (result) {
+                    console.log('MIS data loaded:', result);
+                    hideTableLoading();
+                    if (result.success) {
+                        currentMisData = result.data;
+                        renderMisTable(result.data);
+                    } else {
+                        showError(result.error);
+                        renderMisTable([]);
+                    }
+                })
+                .withFailureHandler(function (error) {
+                    console.error('Error loading MIS data:', error);
+                    hideTableLoading();
+                    showError('Error loading MIS data: ' + error);
+                    renderMisTable([]);
+                })
+                .calculateMISScores(userName, userRole, startDate, endDate);
+        }
+
+        function renderMisTable(data) {
+            const tbody = document.getElementById('misTableBody');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="12" class="text-center">No data found for selected date range</td></tr>';
+                return;
+            }
+
+            // Setup user filter if more than 1 user (only setup, don't render yet)
+            setupUserFilter(data);
+
+            // Apply user filter and render
+            renderFilteredTable(data);
+
+            // Reset unsaved changes flag when new data is loaded
+            hasUnsavedChanges = false;
+            const saveBtn = document.getElementById('saveBtn');
+            if (saveBtn) {
+                saveBtn.style.display = 'none';
+            }
+        }
+
+        function setupUserFilter(data) {
+            const userFilterContainer = document.getElementById('userFilterContainer');
+
+            if (data.length <= 1) {
+                userFilterContainer.style.display = 'none';
+                return;
+            }
+
+            userFilterContainer.style.display = 'block';
+
+            // Get unique users
+            const users = [];
+            const seen = new Set();
+            data.forEach(row => {
+                if (!seen.has(row.userId)) {
+                    seen.add(row.userId);
+                    users.push({ userId: row.userId, name: row.name });
+                }
+            });
+
+            // Check if we need to rebuild the dropdown
+            const existingCheckboxes = document.querySelectorAll('.user-checkbox');
+            const existingUserIds = Array.from(existingCheckboxes).map(cb => cb.value);
+            const newUserIds = users.map(u => u.userId);
+
+            // Only rebuild if users have changed
+            if (existingCheckboxes.length !== newUserIds.length ||
+                !existingUserIds.every(id => newUserIds.includes(id))) {
+
+                // Populate user checkboxes
+                const checkboxContainer = document.getElementById('userCheckboxes');
+                checkboxContainer.innerHTML = '';
+
+                users.forEach(user => {
+                    const div = document.createElement('div');
+                    div.className = 'form-check user-option';
+                    div.innerHTML = `
+                          <input class="form-check-input user-checkbox" type="checkbox" value="${user.userId}" id="user_${user.userId.replace(/[^a-zA-Z0-9]/g, '_')}" checked>
+                          <label class="form-check-label" for="user_${user.userId.replace(/[^a-zA-Z0-9]/g, '_')}" style="font-size: 12px;">
+                              ${user.name} (${user.userId})
+                          </label>
+                      `;
+                    checkboxContainer.appendChild(div);
+                });
+
+                // Setup search functionality
+                const searchInput = document.getElementById('userSearch');
+                searchInput.removeEventListener('input', handleUserSearch); // Remove existing listener
+                searchInput.addEventListener('input', handleUserSearch);
+
+                // Setup checkbox change handlers
+                const checkboxes = document.querySelectorAll('.user-checkbox');
+                checkboxes.forEach(checkbox => {
+                    checkbox.removeEventListener('change', handleUserCheckboxChange); // Remove existing listener
+                    checkbox.addEventListener('change', handleUserCheckboxChange);
+                });
+
+                updateUserFilterDisplay(false); // Don't trigger re-render
+            }
+        }
+
+        function updateUserFilterDisplay(shouldRerender = true) {
+            const checkboxes = document.querySelectorAll('.user-checkbox');
+            const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
+            const button = document.getElementById('userFilterBtn');
+
+            if (checkedBoxes.length === 0) {
+                button.textContent = 'No Users Selected';
+            } else if (checkedBoxes.length === checkboxes.length) {
+                button.textContent = 'All Users';
+            } else if (checkedBoxes.length === 1) {
+                const label = checkedBoxes[0].nextElementSibling.textContent.split(' (')[0];
+                button.textContent = label;
+            } else {
+                button.textContent = `${checkedBoxes.length} Users Selected`;
+            }
+
+            // Only re-render if requested and data exists
+            if (shouldRerender && currentMisData && currentMisData.length > 0) {
+                renderFilteredTable(currentMisData);
+            }
+        }
+
+        function applyUserFilter(data) {
+            const checkboxes = document.querySelectorAll('.user-checkbox:checked');
+
+            if (checkboxes.length === 0) {
+                return data; // Show all if none selected
+            }
+
+            const selectedUserIds = Array.from(checkboxes).map(cb => cb.value);
+            return data.filter(row => selectedUserIds.includes(row.userId));
+        }
+
+        function selectAllUsers() {
+            const checkboxes = document.querySelectorAll('.user-checkbox');
+            checkboxes.forEach(checkbox => checkbox.checked = true);
+            updateUserFilterDisplay(true);
+        }
+
+        window.selectAllUsers = selectAllUsers;
+
+        function clearAllUsers() {
+            const checkboxes = document.querySelectorAll('.user-checkbox');
+            checkboxes.forEach(checkbox => checkbox.checked = false);
+            updateUserFilterDisplay(true);
+        }
+
+        window.clearAllUsers = clearAllUsers;
+
+        // Prevent dropdown from closing when clicking inside
+        document.addEventListener('DOMContentLoaded', function () {
+            const dropdown = document.getElementById('userDropdown');
+            if (dropdown) {
+                dropdown.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                });
+            }
+        });
+
+        function markUnsaved() {
+            hasUnsavedChanges = true;
+            const saveBtn = document.getElementById('saveBtn');
+            if (saveBtn) {
+                saveBtn.style.display = 'block';
+            }
+        }
+
+        // Make it globally available
+        window.markUnsaved = markUnsaved;
+
+        function saveAllChanges() {
+            console.log('saveAllChanges called - Current tab:', currentMisPageTab);
+            console.log('Has delegation unsaved changes:', hasDelegationPageUnsavedChanges);
+            console.log('Has MIS unsaved changes:', hasUnsavedChanges);
+
+            if (currentMisPageTab === 'mis' && hasUnsavedChanges) {
+                console.log('Saving MIS changes...');
+                saveMisChanges();
+            } else if (currentMisPageTab === 'delegation' && hasDelegationPageUnsavedChanges) {
+                console.log('Saving delegation changes...');
+                saveDelegationPageChanges();
+            } else {
+                console.log('No unsaved changes or unknown tab:', currentMisPageTab);
+                // Hide save button if no changes
+                const saveBtn = document.getElementById('saveBtn');
+                if (saveBtn) {
+                    saveBtn.style.display = 'none';
+                }
+            }
+        }
+
+        function saveMisChanges() {
+            if (!hasUnsavedChanges) return;
+
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const weekSelect = document.getElementById('weekNumber');
+            const weekNumber = weekSelect.value || getCurrentWeekNumber(startDate);
+
+            if (!weekNumber) {
+                showError('Please select a valid week number');
+                return;
+            }
+
+            const commitmentInputs = document.querySelectorAll('.commitment-input:not(.delegation-page-input):not([disabled])');
+            const commitments = {};
+
+            commitmentInputs.forEach(function (input) {
+                const userId = input.dataset.user;
+                const type = input.dataset.type;
+                const value = input.value ? input.value.trim() : '';
+
+                if (value !== '') {
+                    if (!commitments[userId]) {
+                        commitments[userId] = { wnd: '', wndot: '' };
+                    }
+                    commitments[userId][type] = value;
+                }
+            });
+
+            if (Object.keys(commitments).length === 0) {
+                showError('No commitments to save - please enter values before saving');
+                hasUnsavedChanges = false;
+                const saveBtn = document.getElementById('saveBtn');
+                if (saveBtn) {
+                    saveBtn.style.display = 'none';
+                }
+                return;
+            }
+
+            showTableLoading();
+
+            let saveCount = 0;
+            const totalSaves = Object.keys(commitments).length;
+            let hasError = false;
+
+            function saveNext() {
+                const userIds = Object.keys(commitments);
+                if (saveCount >= totalSaves || hasError) {
+                    hideTableLoading();
+                    if (!hasError) {
+                        hasUnsavedChanges = false;
+                        const saveBtn = document.getElementById('saveBtn');
+                        if (saveBtn) {
+                            saveBtn.style.display = 'none';
+                        }
+                        showSuccess('All MIS commitments saved successfully');
+                        loadMisData();
+                    }
+                    return;
+                }
+
+                const userId = userIds[saveCount];
+                const wndCommitment = commitments[userId].wnd || '';
+                const wndotCommitment = commitments[userId].wndot || '';
+
+                google.script.run
+                    .withSuccessHandler(function () {
+                        saveCount++;
+                        saveNext();
+                    })
+                    .withFailureHandler(function (error) {
+                        hasError = true;
+                        hideTableLoading();
+                        showError('Error saving MIS commitments: ' + error);
+                    })
+                    .saveWorkCommitments(userId, weekNumber, startDate, endDate, wndCommitment, wndotCommitment);
+            }
+
+            saveNext();
+        }
+
+        function getCurrentWeekNumber(dateStr) {
+            if (!dateStr) return null;
+
+            // Try to use the same logic as the backend getWeekNumber function
+            const date = new Date(dateStr);
+
+            // Check if there are available weeks in the dropdown first
+            const weekSelect = document.getElementById('weekNumber');
+            if (weekSelect) {
+                const options = weekSelect.querySelectorAll('option');
+
+                for (let option of options) {
+                    if (option.dataset.startDate === dateStr) {
+                        return parseInt(option.value);
+                    }
+                }
+            }
+
+            // Fallback to calculation
+            const startOfYear = new Date(date.getFullYear(), 0, 1);
+            const diffInTime = date.getTime() - startOfYear.getTime();
+            const diffInDays = Math.ceil(diffInTime / (1000 * 3600 * 24));
+            return Math.ceil(diffInDays / 7);
+        }
+
+        function viewProcessDetails(userId, userName) {
+            console.log('View process details called for:', userId, userName);
+
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+
+            if (!startDateInput || !endDateInput) {
+                console.error('Date inputs not found');
+                showError('Date inputs not found');
+                return;
+            }
+
+            const startDate = startDateInput.value;
+            const endDate = endDateInput.value;
+
+            if (!startDate || !endDate) {
+                showError('Please select a valid date range');
+                return;
+            }
+
+            console.log('Calling with dates:', startDate, 'to', endDate);
+            showProcessModalWithLoading(userId, userName, startDate, endDate);
+
+            try {
+                google.script.run
+                    .withSuccessHandler(function (result) {
+                        console.log('Process details result:', result);
+                        if (result && result.success) {
+                            populateProcessModal(result.data);
+                        } else {
+                            showProcessModalError('Error: ' + (result.error || 'Unknown error'));
+                        }
+                    })
+                    .withFailureHandler(function (error) {
+                        console.error('Process details error:', error);
+                        showProcessModalError('Error loading process details: ' + error);
+                    })
+                    .getProcessDetails(userId, startDate, endDate);
+            } catch (error) {
+                console.error('Exception calling getProcessDetails:', error);
+                showProcessModalError('Error calling process details: ' + error);
+            }
+        }
+
+        // Make it globally available
+        window.viewProcessDetails = viewProcessDetails;
+
+        function showProcessModalWithLoading(userId, userName, startDate, endDate) {
+            const modalTitle = document.getElementById('modalTitle');
+            const modalSubtitle = document.getElementById('modalSubtitle');
+            const container = document.getElementById('processTableContainer');
+            const modal = document.getElementById('processModal');
+
+            if (modalTitle) modalTitle.textContent = `Process Details - ${userName}`;
+            if (modalSubtitle) modalSubtitle.textContent = `${userId} | ${startDate} to ${endDate}`;
+
+            if (container) {
+                container.innerHTML = `
+                        <div style="display: flex; justify-content: center; align-items: center; padding: 50px;">
+                            <div class="loading-spinner"></div>
+                        </div>
+                    `;
+            }
+
+            if (modal) {
+                modal.style.display = 'flex';
+            }
+        }
+
+        function populateProcessModal(processData) {
+            const container = document.getElementById('processTableContainer');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            if (processData.length === 0) {
+                container.innerHTML = '<p class="text-center" style="padding: 20px;">No process data found for selected date range</p>';
+            } else {
+                const table = document.createElement('table');
+                table.className = 'process-table';
+
+                table.innerHTML = `
+                        <thead>
+                            <tr>
+                                <th>Process Name</th>
+                                <th>Total Task</th>
+                                <th>Total Completed</th>
+                                <th>Task Score</th>
+                                <th>Total Complete Task</th>
+                                <th>On Time Done Task</th>
+                                <th>Time Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${processData.map(process => `
+                                <tr>
+                                    <td>${process.processName}</td>
+                                    <td>${process.totalTasks}</td>
+                                    <td>${process.totalCompleted}</td>
+                                    <td>${process.taskScore}</td>
+                                    <td>${process.totalCompleteTasks}</td>
+                                    <td>${process.onTimeDoneTasks}</td>
+                                    <td>${process.timeScore}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    `;
+
+                container.appendChild(table);
+            }
+        }
+
+        function showProcessModalError(errorMessage) {
+            const container = document.getElementById('processTableContainer');
+            if (container) {
+                container.innerHTML = `<p class="text-center" style="color: red; padding: 20px;">${errorMessage}</p>`;
+            }
+        }
+
+        function closeProcessModal() {
+            const modal = document.getElementById('processModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Make it globally available
+        window.closeProcessModal = closeProcessModal;
+
+        // Make reset function globally available
+        window.resetMisPageFilters = resetMisPageFilters;
+
+        function showError(message) {
+            alert('Error: ' + message);
+        }
+
+        function showSuccess(message) {
+            alert('Success: ' + message);
+        }
+
+        // Close modal when clicking outside
+        document.addEventListener('click', function (e) {
+            const modal = document.getElementById('processModal');
+            if (e.target === modal) {
+                closeProcessModal();
+            }
+        });
+
+        // Warn about unsaved changes
+        window.addEventListener('beforeunload', function (e) {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        // Also ensure initialization function is available
+        window.initializeMISPage = window.initializeMISPage || function () {
+            if (isInitialized) return;
+            isInitialized = true;
+
+            console.log('Initializing MIS Page...');
+            showPageLoading();
+            setupEventListeners();
+
+            setTimeout(function () {
+                loadAvailableWeeks();
+            }, 250);
+        };
+
+        function handleUserSearch() {
+            const searchTerm = this.value.toLowerCase();
+            const userOptions = document.querySelectorAll('.user-option');
+
+            userOptions.forEach(option => {
+                const label = option.querySelector('label').textContent.toLowerCase();
+                option.style.display = label.includes(searchTerm) ? 'block' : 'none';
+            });
+        }
+
+        function handleUserCheckboxChange() {
+            updateUserFilterDisplay(true); // Trigger re-render
+        }
+
+        function renderFilteredTable(data) {
+            const filteredData = applyUserFilter(data);
+            const tbody = document.getElementById('misTableBody');
+            tbody.innerHTML = '';
+
+            filteredData.forEach(function (row, index) {
+                const tr = document.createElement('tr');
+                const canEdit = (userRole === 'admin');
+                tr.innerHTML = `
+                      <td>${row.userId}</td>
+                      <td>${row.name}</td>
+                      <td>${row.currentWeekScoreWND}</td>
+                      <td>${row.totalTasks}</td>
+                      <td>${row.totalCompletedTasks}</td>
+                      <td>${row.wndScore}</td>
+                      <td><input type="number" class="commitment-input" data-user="${row.userId}" data-type="wnd" value="${row.nextCommitmentWND || ''}" onchange="markUnsaved()" ${!canEdit ? 'disabled' : ''}></td>
+                      <td>${row.currentWeekScoreWNDOT}</td>
+                      <td>${row.totalCompleteTasks}</td>
+                      <td>${row.onTimeDoneTasks}</td>
+                      <td>${row.wndotScore}</td>
+                      <td><input type="number" class="commitment-input" data-user="${row.userId}" data-type="wndot" value="${row.nextCommitmentWNDOT || ''}" onchange="markUnsaved()" ${!canEdit ? 'disabled' : ''}></td>
+                      <td><button class="view-btn" onclick="viewProcessDetails('${row.userId.replace(/'/g, "\\'")}', '${row.name.replace(/'/g, "\\'")}')">View</button></td>
+                  `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+
+</html>
