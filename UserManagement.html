@@ -1,0 +1,2787 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <base target="_top">
+    <style>
+        .user-management-container {
+            padding: 20px 40px;
+            margin: 0 auto;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .search-container {
+            position: relative;
+        }
+
+        .search-input {
+            padding: 8px 12px 8px 35px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 250px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+        }
+
+        .create-user-btn {
+            background: #1A7499;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .create-user-btn:hover {
+            background: #145a77;
+        }
+
+        .users-table-container {
+            background: white;
+            overflow-x: auto;
+            margin-bottom: 30px;
+        }
+
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .users-table thead {
+            background: #f8f9fa;
+        }
+
+        .users-table th {
+            background-color: #1A7499 !important;
+            /* Match --primary-color */
+            color: white !important;
+            padding: 8px 10px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 12px;
+            border-bottom: 2px solid #dee2e6;
+            white-space: nowrap;
+        }
+
+        .users-table th:last-child {
+            text-align: center;
+        }
+
+        .users-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #dee2e6;
+            color: #212529;
+            font-size: 12px;
+        }
+
+        .users-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        /* Sticky Table Headers */
+        .users-table thead th,
+        .menu-mgmt-table thead th,
+        .input-table thead th,
+        /* Added input-table here */
+        .permissions-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background-color: #1A7499 !important;
+            color: white !important;
+            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Adjust colors for specific tables to match their existing headers */
+        .permissions-table thead th {
+            background-color: #e9ecef !important;
+            color: #495057 !important;
+        }
+
+        .input-table thead th {
+            background-color: #f1f3f5 !important;
+            color: #212529 !important;
+        }
+
+
+        /* Adjust colors for specific tables to match their existing headers */
+        .permissions-table thead th {
+            background-color: #e9ecef !important;
+            color: #495057 !important;
+        }
+
+        .input-table thead th {
+            background-color: #f1f3f5 !important;
+            color: #212529 !important;
+        }
+
+        /* Ensure parent containers allow sticky headers and scroll */
+        .users-table-container,
+        .menu-mgmt-table-container {
+            position: relative;
+            max-height: calc(100vh - 200px);
+            /* Adjust based on page layout */
+            overflow-y: auto;
+            overflow-x: auto;
+            border: 1px solid #dee2e6;
+            /* Optional border for containment */
+        }
+
+        .modal-body .table-responsive {
+            max-height: 50vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .table-responsive {
+            overflow: visible;
+            /* Let the container handle scroll */
+        }
+
+
+        /* New Table Input Styles */
+        .input-table {
+            width: 100%;
+            font-size: 13px;
+            margin-bottom: 0;
+        }
+
+        .input-table th {
+            background: #f1f3f5;
+            font-weight: 600;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .input-table td {
+            padding: 5px;
+            vertical-align: middle;
+        }
+
+        .input-sm {
+            padding: 4px 8px;
+            font-size: 13px;
+            height: 30px;
+        }
+
+        .btn-mini {
+            padding: 2px 6px;
+            font-size: 11px;
+            border-radius: 3px;
+            border: none;
+            cursor: pointer;
+            color: white;
+        }
+
+        .btn-mini.btn-delete {
+            background-color: #dc3545;
+        }
+
+        .btn-mini.btn-primary {
+            background-color: #007bff;
+        }
+
+        .btn-mini:hover {
+            opacity: 0.8;
+        }
+
+        /* Icon action buttons */
+        .action-icon-btn {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 3px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .action-icon-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .action-icon-btn.edit {
+            color: #28a745;
+        }
+
+        .action-icon-btn.view {
+            color: #17a2b8;
+        }
+
+        .action-icon-btn.delete {
+            color: #dc3545;
+        }
+
+        .action-icon-btn.whatsapp {
+            color: #25D366;
+        }
+
+        .action-icon-btn:hover.edit {
+            background: rgba(40, 167, 69, 0.1);
+        }
+
+        .action-icon-btn:hover.view {
+            background: rgba(23, 162, 184, 0.1);
+        }
+
+        .action-icon-btn:hover.delete {
+            background: rgba(220, 53, 69, 0.1);
+        }
+
+        .action-icon-btn:hover.whatsapp {
+            background: rgba(37, 211, 102, 0.1);
+        }
+
+        /* Small eye button */
+        .btn-eye {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: #6c757d;
+            font-size: 10px;
+            padding: 2px 4px;
+            margin-left: 4px;
+            border-radius: 2px;
+            transition: color 0.2s;
+        }
+
+        .btn-eye:hover {
+            color: #1A7499;
+        }
+
+        .edit-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            opacity: 1;
+            /* Changed for new functionality */
+        }
+
+        .btn-eye:hover {
+            color: #1A7499 !important;
+        }
+
+        .btn-whatsapp:hover {
+            background: #128C7E !important;
+        }
+
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            /* Increased top margin */
+            padding: 0;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 800px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-header {
+            padding: 20px;
+            background: #1A7499;
+            color: white;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .close {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+
+        .close:hover {
+            opacity: 0.8;
+        }
+
+        .modal-body {
+            padding: 25px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+        .permissions-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-top: 10px;
+            table-layout: fixed;
+        }
+
+        .permissions-table th,
+        .permissions-table td {
+            border: 1px solid #dee2e6;
+            padding: 8px;
+            vertical-align: top;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            white-space: normal;
+        }
+
+        .permissions-table td label {
+            white-space: normal;
+            word-break: break-word;
+            display: inline-block;
+            max-width: 100%;
+        }
+
+        .button-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .button-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: #f0f7fa;
+            padding: 3px 8px;
+            border-radius: 4px;
+            border: 1px solid #d1e3f0;
+            font-size: 11px;
+            margin-bottom: 2px;
+        }
+
+        /* Dynamic Column Widths */
+        /* Default (Access Hidden - 3 cols) */
+        .permissions-table th:nth-child(1) {
+            width: 33%;
+        }
+
+        .permissions-table th:nth-child(2) {
+            width: 33%;
+        }
+
+        .permissions-table th:nth-child(3) {
+            width: 34%;
+        }
+
+        /* Access Shown (4 cols) */
+        #permissionTree.show-access-column .permissions-table th:nth-child(1) {
+            width: 25%;
+        }
+
+        #permissionTree.show-access-column .permissions-table th:nth-child(2) {
+            width: 25%;
+        }
+
+        #permissionTree.show-access-column .permissions-table th:nth-child(3) {
+            width: 35%;
+        }
+
+        #permissionTree.show-access-column .permissions-table th:nth-child(4) {
+            width: 15%;
+        }
+
+        .permissions-table th {
+            background-color: #e9ecef;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .toggle-icon {
+            cursor: pointer;
+            margin-right: 5px;
+            display: inline-block;
+            transition: transform 0.2s;
+            width: 16px;
+            text-align: center;
+        }
+
+        .toggle-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .hidden-row {
+            display: none;
+        }
+
+        .hidden-content {
+            display: none;
+        }
+
+        /* Checkbox wrapper styles */
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+        }
+
+        .checkbox-wrapper label {
+            margin-bottom: 0;
+            margin-left: 5px;
+            cursor: pointer;
+        }
+
+        .loading {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            min-height: 150px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 1.1em;
+        }
+
+        .loading i {
+            font-size: 2em;
+            margin-bottom: 15px;
+            color: #007bff;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border: 1px solid #f5c6cb;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            border-radius: 8px;
+        }
+
+        .loading-overlay i {
+            font-size: 3em;
+            color: #007bff;
+        }
+
+        /* Blue Checkbox */
+        input[type="checkbox"] {
+            accent-color: #007bff;
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            background: #f8f9fa;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+
+        .btn-secondary {
+            background: #dc3545;
+            /* Red for Cancel */
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #c82333;
+        }
+
+        /* Toggle Icon Styling */
+        .toggle-icon {
+            cursor: pointer;
+            margin-right: 10px;
+            transition: transform 0.2s;
+            width: 14px;
+            text-align: center;
+            color: #555;
+        }
+
+        .toggle-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        /* Custom Red Alert Popup */
+        .custom-alert-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .custom-alert-content {
+            background: #dc3545;
+            color: white;
+            padding: 30px 50px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+            max-width: 80%;
+            position: relative;
+        }
+
+        .custom-alert-close {
+            margin-top: 20px;
+            background: white;
+            color: #dc3545;
+            border: none;
+            padding: 8px 25px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: opacity 0.2s;
+        }
+
+        .custom-alert-close:hover {
+            opacity: 0.9;
+        }
+
+        .deactivated-row,
+        .deactivated-row td {
+            background-color: #fecaca !important;
+            color: black !important;
+        }
+
+        .deactivated-row .edit-btn {
+            border: 1px solid black !important;
+            background-color: #6c757d !important;
+        }
+
+        /* Access Type Column Visibility Control */
+        #permissionTree:not(.show-access-column) .access-type-col {
+            display: none !important;
+        }
+
+        #permissionTree.show-access-column .access-type-col {
+            display: table-cell !important;
+        }
+
+        /* Navigation Strip Styles */
+        .nav-strip {
+            display: flex;
+            gap: 10px;
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 100px;
+            border: 1px solid #e0e0e0;
+            margin-bottom: 0;
+            width: fit-content;
+        }
+
+        .nav-pill {
+            background: transparent;
+            color: #555;
+            border: none;
+            padding: 6px 15px;
+            border-radius: 100px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-pill:hover {
+            background: #e9ecef;
+            color: #1A7499;
+        }
+
+        .nav-pill.active {
+            background: #1A7499;
+            color: white;
+            box-shadow: 0 2px 4px rgba(26, 116, 153, 0.25);
+        }
+
+        .view-section {
+            display: none;
+        }
+
+        .view-section.active {
+            display: block;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Menu Management Styles */
+        .menu-mgmt-table-container {
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+        }
+
+        .menu-mgmt-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .menu-mgmt-table th {
+            background-color: #1A7499;
+            color: white;
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        .menu-mgmt-table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .menu-mgmt-table input {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 12px;
+            box-sizing: border-box;
+        }
+
+        .menu-mgmt-table input:focus {
+            outline: none;
+            border-color: #1A7499;
+            box-shadow: 0 0 0 2px rgba(26, 116, 153, 0.1);
+        }
+
+        .action-btn-group {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+        }
+
+        .btn-mini {
+            padding: 4px 8px;
+            font-size: 11px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: none;
+            color: white;
+        }
+
+        .btn-edit {
+            background-color: #28a745;
+        }
+
+        .btn-view {
+            background-color: #17a2b8;
+        }
+
+        .btn-delete {
+            background-color: #dc3545;
+        }
+
+        .btn-save {
+            background-color: #007bff;
+        }
+
+        .btn-cancel {
+            background-color: #6c757d;
+        }
+
+        .add-btn-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 15px;
+        }
+
+        .add-row-btn {
+            background-color: white;
+            color: #1A7499;
+            border: 2px solid #1A7499;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .add-row-btn:hover {
+            background-color: #1A7499;
+            color: white;
+        }
+
+        .mgmt-input-row {
+            background-color: #f1f8ff;
+        }
+
+        /* Global Blocking Loader */
+        .global-loader-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(255, 255, 255, 0.7);
+            z-index: 9999;
+            display: none;
+            /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .global-loader-overlay i {
+            font-size: 3em;
+            color: #007bff;
+            margin-bottom: 15px;
+        }
+
+        /* Small inline loader for tables */
+        .inline-loader {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #1A7499;
+            font-size: 14px;
+            gap: 10px;
+        }
+
+        .inline-loader i {
+            font-size: 1.5em;
+        }
+
+        /* Page-specific error message */
+        .page-error-message {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 12px 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-error-message.error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container my-4 user-management-container">
+        <div class="flex flex-row justify-between item-center mb-4 gap-3">
+            <div class="nav-strip">
+                <button id="userCreatePill" class="nav-pill active" type="button"
+                    onclick="window.switchView('userCreateView', this)">
+                    <i class="fas fa-users"></i> User Create
+                </button>
+                <button id="createSetupPill" class="nav-pill" type="button"
+                    onclick="window.switchView('createSetupView', this)">
+                    <i class="fas fa-cogs"></i> Create Setup
+                </button>
+                <button id="createBtnPill" class="nav-pill" type="button"
+                    onclick="window.switchView('createButtonView', this)">
+                    <i class="fas fa-circle-plus"></i> Create Button
+                </button>
+            </div>
+        </div>
+
+        <div id="userCreateView" class="view-section active">
+            <div id="userCreateActions" class="d-flex flex-row align-items-center justify-content-between mb-3">
+                <div class="d-flex flex-row align-items-center gap-2">
+                    <label for="userFilterInput" class="mb-0 me-1" style="font-size: 13px;">Search</label>
+                    <input type="text" id="userFilterInput"
+                        style="border: 1px solid #1A7499; width: 220px; font-size: 13px; padding: 6px 10px;"
+                        class="form-control" placeholder="Search..." onkeyup="window.filterUsers()">
+                </div>
+
+                <button class="create-user-btn" onclick="window.openCreateUserModal()">
+                    <i class="fas fa-plus me-1"></i> Create New User
+                </button>
+            </div>
+            <div id="messageContainer"></div>
+
+            <div class="table-responsive users-table-container">
+                <div id="usersTableContent" class="loading">
+                    <i class="fas fa-spinner fa-spin"></i> Loading users...
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Setup View (Master Sheet Management) -->
+        <div id="createSetupView" class="view-section">
+            <div id="setupMessageContainer"></div>
+            <div class="menu-mgmt-table-container">
+                <div class="add-btn-container"
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div style="display: flex; gap: 10px;">
+                        <select id="setupFilterMenu" class="form-control"
+                            style="width: 200px; font-size: 13px; padding: 6px; border: 1px solid #ced4da; border-radius: 4px;"
+                            onchange="window.updateSetupSubMenuFilter()">
+                            <option value="">All Menus</option>
+                        </select>
+                        <select id="setupFilterSubMenu" class="form-control"
+                            style="width: 200px; font-size: 13px; padding: 6px; border: 1px solid #ced4da; border-radius: 4px;"
+                            onchange="window.filterSetupTable()">
+                            <option value="">All Sub Menus</option>
+                        </select>
+                    </div>
+                    <button class="create-user-btn" onclick="window.openSetupModal()">
+                        <i class="fas fa-plus me-1"></i> Add Setup
+                    </button>
+                </div>
+
+                <div id="setupTableContainer">
+                    <div id="setupLoader" class="inline-loader">
+                        <i class="fas fa-spinner fa-spin"></i> Loading setup data...
+                    </div>
+                    <div class="table-responsive" id="setupTableWrapper" style="display: none;">
+                        <table class="menu-mgmt-table">
+                            <thead>
+                                <tr>
+                                    <th>Menu</th>
+                                    <th>Sub Menu</th>
+                                    <th>Sheet Name</th>
+                                    <th>DB Link</th>
+                                    <th>External Link</th>
+                                    <!-- Range is removed from display -->
+                                    <th>Entry Viewable</th>
+                                    <th style="width: 120px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="setupMgmtBody">
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Button View (Create Button Sheet Management) -->
+        <div id="createButtonView" class="view-section">
+            <div id="buttonMessageContainer"></div>
+            <div class="menu-mgmt-table-container">
+                <div class="add-btn-container">
+                    <button class="create-user-btn" onclick="window.openButtonModal()">
+                        <i class="fas fa-plus me-1"></i> Add Button
+                    </button>
+                </div>
+
+                <div id="buttonTableContainer">
+                    <div id="buttonLoader" class="inline-loader">
+                        <i class="fas fa-spinner fa-spin"></i> Loading button data...
+                    </div>
+                    <div class="table-responsive" id="buttonTableWrapper" style="display: none;">
+                        <table class="menu-mgmt-table">
+                            <thead>
+                                <tr>
+                                    <th>Menu</th>
+                                    <th>Sub Menu</th>
+                                    <th>Button Name</th>
+                                    <th>URL</th>
+                                    <th style="width: 120px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="buttonMgmtBody">
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Alert Overlay -->
+    <div id="customAlertOverlay" class="custom-alert-overlay">
+        <div class="custom-alert-content" style="max-width: 500px;">
+            <div id="customAlertMessage" style="white-space: pre-line; line-height: 1.5; margin-bottom: 25px;"></div>
+            <div id="customAlertButtons" style="display: flex; gap: 15px; justify-content: flex-end;">
+                <button id="confirmCancelBtn" class="custom-alert-close"
+                    style="display: none; margin-top: 0; background: #6c757d; color: white;"
+                    onclick="window.hideCustomAlert()">Cancel</button>
+                <button id="confirmDeleteBtn" class="btn-secondary"
+                    style="display: none; padding: 8px 25px; background: #c82333; border: 1px solid white;">Delete</button>
+                <button id="alertOkBtn" class="custom-alert-close" style="margin-top: 0;"
+                    onclick="window.hideCustomAlert()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Full-Screen Loader -->
+    <div id="globalLoaderOverlay" class="global-loader-overlay">
+        <i class="fas fa-spinner fa-spin"></i>
+        <div style="font-weight: 600; color: #555;">Processing...</div>
+    </div>
+
+    <!-- Create User Modal -->
+    <div id="createUserModal" class="modal">
+        <div class="modal-content" style="position: relative;">
+            <div id="modalLoadingOverlay" class="loading-overlay" style="display: none;">
+                <div style="text-align: center;">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <div style="margin-top: 10px; font-weight: 500; color: #555;">Loading data...</div>
+                </div>
+            </div>
+            <div class="modal-header">
+                <h2>Create New User</h2>
+                <button class="close" onclick="window.closeCreateUserModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createUserForm">
+                    <div class="form-group">
+                        <label for="userId">Email (User ID) *</label>
+                        <input type="email" id="userId" name="userId" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password *</label>
+                        <input type="text" id="password" name="password" required>
+                    </div>
+
+                    <div class="form-row" style="display: flex; gap: 20px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="displayName">Display Name *</label>
+                            <input type="text" id="displayName" name="displayName" required>
+                        </div>
+
+                        <div class="form-group" style="flex: 1;">
+                            <label for="role">Role</label>
+                            <select id="role" name="role" onchange="toggleAccessTypeVisibility()">
+                                <option value="admin">Admin</option>
+                                <option value="user">User</option>
+                                <option value="deactivate">Deactivate</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row" style="display: flex; gap: 20px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="manager">Manager Email</label>
+                            <input type="email" id="manager" name="manager">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="mobileNumber">Mobile Number</label>
+                            <input type="text" id="mobileNumber" name="mobileNumber" placeholder="+91 98765 43210">
+                        </div>
+                    </div>
+
+                    <div class="form-row" style="display: flex; gap: 20px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="metricsVisibility">Metrics Visibility</label>
+                            <select id="metricsVisibility" name="metricsVisibility">
+                                <option value="Yes">All</option>
+                                <option value="No">None</option>
+                            </select>
+                            <small style="color: grey; font-size: 11px;">Who can view user's metrics</small>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="profilePicture">Profile Picture</label>
+                            <input type="file" id="profilePicture" name="profilePicture" accept=".jpg,.png,.jpeg">
+                            <small style="color: grey; font-size: 11px;">Optional: JPG/PNG</small>
+                        </div>
+                    </div>
+
+                    <div class="permissions-section">
+                        <h3>Permissions</h3>
+                        <div id="permissionTree" class="permission-tree"
+                            style="max-height: 400px; overflow-y: auto; padding: 0;">
+                            <div class="loading">
+                                <i class="fas fa-spinner fa-spin"></i> Loading permissions...
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="window.closeCreateUserModal()">Cancel</button>
+                <button class="btn-primary" onclick="window.submitCreateUser()">Create User</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Setup Modal (Master Sheet) -->
+    <div id="setupModal" class="modal">
+        <div class="modal-content" style="max-width: 90%; width: 1200px;">
+            <div class="modal-header">
+                <h2 id="setupModalTitle">Add/Edit Setup</h2>
+                <button class="close" onclick="window.closeSetupModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 10px;">
+                <div id="setupModalMessage" class="mb-3"></div>
+                <!-- Datalist for Main Menu Suggestions -->
+                <datalist id="setupMainMenuListOfOptions"></datalist>
+                <datalist id="setupSubMenuListOfOptions"></datalist>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered input-table" id="setupInputTable">
+                        <thead>
+                            <tr>
+                                <th>Main Menu</th>
+                                <th>Sub Menu</th>
+                                <th>Sheet Name</th>
+                                <th>DB Link</th>
+                                <th>External ID</th>
+                                <th>Ques</th>
+                                <th>Table</th>
+                                <th style="width: 50px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Rows will be added here -->
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 10px;">
+                    <button class="btn-secondary" onclick="window.addSetupRow()"
+                        style="padding: 5px 10px; font-size: 12px;">
+                        <i class="fas fa-plus"></i> Add Row
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="window.closeSetupModal()">Cancel</button>
+                <button class="btn-primary" onclick="window.saveSetupEntry()">Save Setup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Button Modal (Create Button Sheet) -->
+    <div id="buttonModal" class="modal">
+        <div class="modal-content" style="max-width: 90%; width: 1000px;">
+            <div class="modal-header">
+                <h2 id="buttonModalTitle">Add/Edit Button</h2>
+                <button class="close" onclick="window.closeButtonModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 10px;">
+                <div id="buttonModalMessage" class="mb-3"></div>
+                <div class="table-responsive">
+                    <table class="table table-bordered input-table" id="buttonInputTable">
+                        <thead>
+                            <tr>
+                                <th>Main Menu</th>
+                                <th>Sub Menu</th>
+                                <th>Button Name</th>
+                                <th>URL / Extra</th>
+                                <th style="width: 50px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Rows will be added here -->
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 10px;">
+                    <button class="btn-secondary" onclick="window.addButtonRow()"
+                        style="padding: 5px 10px; font-size: 12px;">
+                        <i class="fas fa-plus"></i> Add Row
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="window.closeButtonModal()">Cancel</button>
+                <button class="btn-primary" onclick="window.saveButtonEntry()">Save Button</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var menusData = {};
+        var buttonsData = {};
+        var isInitialized = false;
+
+        // Store users globally so we can access them for editing
+        var globalUsers = [];
+        var isEditMode = false;
+        var currentEditingUserId = null;
+
+        // View switching logic
+        window.switchView = function (viewId, pillElement) {
+            // Hide all view sections
+            var sections = document.querySelectorAll('.view-section');
+            sections.forEach(function (section) {
+                section.classList.remove('active');
+            });
+
+            // Show target view section
+            var targetSection = document.getElementById(viewId);
+            if (targetSection) {
+                targetSection.classList.add('active');
+            }
+
+            // Update active pill
+            var pills = document.querySelectorAll('.nav-pill');
+            pills.forEach(function (pill) {
+                pill.classList.remove('active');
+            });
+            if (pillElement) {
+                pillElement.classList.add('active');
+            }
+
+            // Dynamic Data Loading
+            if (viewId === 'createSetupView') {
+                loadSetupData();
+            } else if (viewId === 'createButtonView') {
+                loadButtonData();
+            }
+        };
+
+        // Global Loader Functions
+        window.showGlobalLoader = function (msg) {
+            const loader = document.getElementById('globalLoaderOverlay');
+            if (loader) {
+                loader.style.display = 'flex';
+                const msgDiv = loader.querySelector('div');
+                if (msgDiv && msg) msgDiv.textContent = msg;
+            }
+        };
+
+        window.hideGlobalLoader = function () {
+            const loader = document.getElementById('globalLoaderOverlay');
+            if (loader) loader.style.display = 'none';
+        };
+
+        // Global initialization function that will be called from main.html
+        window.initializeUserManagementPage = function () {
+            if (isInitialized) return;
+            isInitialized = true;
+
+            console.log('Initializing User Management Page...');
+
+            // Add a small delay to ensure Google Apps Script context is ready
+            setTimeout(function () {
+                loadUsers();
+            }, 250);
+        };
+
+        function loadUsers(callback) {
+            console.log('Loading users...');
+            google.script.run
+                .withSuccessHandler(function (response) {
+                    if (response.error) {
+                        document.getElementById('usersTableContent').innerHTML = '<div class="error-message">' + response.error + '</div>';
+                    } else {
+                        globalUsers = response.users || [];
+                        displayUsers(globalUsers);
+                    }
+                    if (callback) callback();
+                })
+                .withFailureHandler(function (error) {
+                    showError(error);
+                    if (callback) callback();
+                })
+                .getUsersData();
+        }
+
+        window.filterUsers = function () {
+            var filterValue = document.getElementById('userFilterInput').value.toLowerCase();
+            if (!filterValue) {
+                displayUsers(globalUsers);
+                return;
+            }
+
+            var filteredUsers = globalUsers.filter(function (user) {
+                return (user.userId && user.userId.toLowerCase().includes(filterValue)) ||
+                    (user.displayName && user.displayName.toLowerCase().includes(filterValue)) ||
+                    (user.role && user.role.toLowerCase().includes(filterValue)) ||
+                    (user.manager && user.manager.toLowerCase().includes(filterValue));
+            });
+
+            displayUsers(filteredUsers);
+        };
+
+        function maskPassword(password) {
+            if (!password) return '';
+            var str = String(password);
+            if (str.length < 4) {
+                return str[0] + '*'.repeat(Math.max(0, str.length - 1));
+            }
+            return str[0] + '****' + str.slice(-2);
+        }
+
+        // Toggle password visibility in user table
+        window.togglePasswordVisibility = function (btn, password) {
+            var passwordSpan = btn.previousElementSibling;
+            var icon = btn.querySelector('i');
+            if (passwordSpan.getAttribute('data-showing') === 'true') {
+                passwordSpan.textContent = maskPassword(password);
+                passwordSpan.setAttribute('data-showing', 'false');
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            } else {
+                passwordSpan.textContent = password;
+                passwordSpan.setAttribute('data-showing', 'true');
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            }
+        };
+
+        // Open WhatsApp chat for a user
+        window.openWhatsAppChat = function (mobileNumber) {
+            if (!mobileNumber) {
+                window.showCustomAlert('No mobile number available for this user.');
+                return;
+            }
+            // Clean the number - remove spaces, dashes, and non-numeric characters except +
+            var cleanNumber = mobileNumber.replace(/[^\d+]/g, '');
+            // Remove leading + if present, WhatsApp API expects the number without +
+            if (cleanNumber.startsWith('+')) {
+                cleanNumber = cleanNumber.substring(1);
+            }
+            var whatsappUrl = 'https://wa.me/' + cleanNumber;
+            window.open(whatsappUrl, '_blank');
+        };
+
+        function displayUsers(users) {
+            console.log('Displaying users:', users);
+            var container = document.getElementById('usersTableContent');
+
+            if (!users || users.length === 0) {
+                container.innerHTML = '<div style="padding: 40px; text-align: center; color: #6c757d;">No users found</div>';
+                return;
+            }
+
+            var tableHtml = '<table class="table table-striped table-bordered users-table">';
+            tableHtml += '<thead>';
+            tableHtml += '<tr>';
+            tableHtml += '<th>Profile</th>';
+            tableHtml += '<th>Username (Email)</th>';
+            tableHtml += '<th>Password</th>';
+            tableHtml += '<th>Name</th>';
+            tableHtml += '<th>Role</th>';
+            tableHtml += '<th>Manager</th>';
+            tableHtml += '<th>Mobile</th>';
+            tableHtml += '<th>Metrics</th>';
+            tableHtml += '<th>Actions</th>';
+            tableHtml += '</tr>';
+            tableHtml += '</thead>';
+            tableHtml += '<tbody>';
+
+            for (var i = 0; i < users.length; i++) {
+                var user = users[i];
+                var picUrl = user.profilePicture ? getThumbnailUrl(user.profilePicture) : '';
+                var imgTag = picUrl ?
+                    '<div style="display: flex; justify-content: center;"><img src="' + picUrl + '" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd;"></div>' :
+                    '<div style="display: flex; justify-content: center;"><div style="width: 45px; height: 45px; border-radius: 50%; background: #eee; display: flex; align-items: center; justify-content: center; color: #888; border: 1px solid #ddd; font-size: 18px;"><i class="fas fa-user"></i></div></div>';
+
+                var rowClass = (user.role && user.role.toLowerCase() === 'deactivate') ? ' class="deactivated-row"' : '';
+                tableHtml += '<tr' + rowClass + '>';
+                tableHtml += '<td>' + imgTag + '</td>';
+                tableHtml += '<td>' + escapeHtml(user.userId) + '</td>';
+                tableHtml += '<td style="white-space: nowrap;">';
+                tableHtml += '<span data-showing="false">' + maskPassword(user.password) + '</span>';
+                tableHtml += '<button class="btn-eye" onclick="window.togglePasswordVisibility(this, \'' + escapeHtml(String(user.password)).replace(/'/g, "\\'") + '\')" title="Show/Hide Password"><i class="fas fa-eye"></i></button>';
+                tableHtml += '</td>';
+                tableHtml += '<td>' + escapeHtml(user.displayName) + '</td>';
+                tableHtml += '<td>' + escapeHtml(user.role) + '</td>';
+                tableHtml += '<td>' + escapeHtml(user.manager) + '</td>';
+                tableHtml += '<td>' + escapeHtml(user.mobileNumber || '') + '</td>';
+                tableHtml += '<td>' + escapeHtml(user.metricsVisible || '') + '</td>';
+                tableHtml += '<td style="text-align: center; white-space: nowrap;">';
+                tableHtml += '<div style="display: inline-flex; gap: 2px;">';
+                tableHtml += '<button class="action-icon-btn edit" onclick="window.prepareEditUser(\'' + escapeHtml(user.userId) + '\')" title="Edit User"><i class="fas fa-edit"></i></button>';
+                tableHtml += '<button class="action-icon-btn view" onclick="window.viewUserPermissions(\'' + escapeHtml(user.userId) + '\')" title="View Permissions"><i class="fas fa-eye"></i></button>';
+                tableHtml += '<button class="action-icon-btn delete" onclick="window.confirmDeleteUser(\'' + escapeHtml(user.userId) + '\')" title="Delete User"><i class="fas fa-trash"></i></button>';
+                tableHtml += '<button class="action-icon-btn whatsapp" onclick="window.openWhatsAppChat(\'' + escapeHtml(user.mobileNumber || '').replace(/'/g, "\\'") + '\')" title="Chat on WhatsApp"><i class="fab fa-whatsapp"></i></button>';
+                tableHtml += '</div>';
+                tableHtml += '</td>';
+                tableHtml += '</tr>';
+            }
+
+            tableHtml += '</tbody>';
+            tableHtml += '</table>';
+
+            container.innerHTML = tableHtml;
+        }
+
+        // --- CREATE SETUP (MASTER SHEET) LOGIC ---
+
+        var globalSetupData = [];
+        var editSetupIndex = null; // Track which row is being edited
+
+        // Helper function to show page-specific error
+        function showPageError(containerId, message) {
+            var container = document.getElementById(containerId);
+            if (container) {
+                container.innerHTML = '<div class="page-error-message error"><i class="fas fa-exclamation-circle"></i> ' + message + '</div>';
+                setTimeout(function () {
+                    container.innerHTML = '';
+                }, 5000);
+            }
+        }
+
+        function loadSetupData() {
+            // Show inline loader, hide table
+            document.getElementById('setupLoader').style.display = 'flex';
+            document.getElementById('setupTableWrapper').style.display = 'none';
+            document.getElementById('setupMessageContainer').innerHTML = '';
+
+            google.script.run
+                .withSuccessHandler(function (response) {
+                    // Hide loader, show table
+                    document.getElementById('setupLoader').style.display = 'none';
+                    document.getElementById('setupTableWrapper').style.display = 'block';
+
+                    if (response.success) {
+                        globalSetupData = response.data || [];
+                        renderSetupTable(globalSetupData);
+                        updateSetupDatalists(globalSetupData);
+                        populateSetupFilters(globalSetupData); // Populate the top filters
+                    } else {
+                        showPageError('setupMessageContainer', response.error || "Failed to load setup data");
+                    }
+                })
+                .withFailureHandler(function (error) {
+                    document.getElementById('setupLoader').style.display = 'none';
+                    document.getElementById('setupTableWrapper').style.display = 'block';
+                    showPageError('setupMessageContainer', 'Failed to load setup data: ' + error);
+                })
+                .getMasterSheetData();
+        }
+
+        function updateSetupDatalists(data) {
+            const mainSet = new Set();
+            const subSet = new Set();
+            data.forEach(row => {
+                if (row[0]) mainSet.add(row[0]);
+                if (row[1]) subSet.add(row[1]);
+            });
+
+            const mainList = document.getElementById('setupMainMenuListOfOptions');
+            mainList.innerHTML = '';
+            mainSet.forEach(val => {
+                const opt = document.createElement('option');
+                opt.value = val;
+                mainList.appendChild(opt);
+            });
+
+            const subList = document.getElementById('setupSubMenuListOfOptions');
+            subList.innerHTML = '';
+            subSet.forEach(val => {
+                const opt = document.createElement('option');
+                opt.value = val;
+                subList.appendChild(opt);
+            });
+        }
+
+        function populateSetupFilters(data) {
+            const mainSet = new Set();
+            data.forEach(row => {
+                if (row[0]) mainSet.add(row[0]);
+            });
+
+            // Populate Main Menu Filter
+            const mainFilter = document.getElementById('setupFilterMenu');
+            const currentSelection = mainFilter.value;
+
+            // Keep the first "All" option
+            mainFilter.innerHTML = '<option value="">All Menus</option>';
+            mainSet.forEach(val => {
+                const opt = document.createElement('option');
+                opt.value = val;
+                opt.textContent = val;
+                mainFilter.appendChild(opt);
+            });
+
+            // Restore selection if possible
+            if (currentSelection && mainSet.has(currentSelection)) {
+                mainFilter.value = currentSelection;
+            }
+
+            // Initialize Sub Menu Filter
+            window.updateSetupSubMenuFilter(false); // false = don't filter table yet, just populate
+        }
+
+        window.updateSetupSubMenuFilter = function (shouldFilterTable = true) {
+            const mainVal = document.getElementById('setupFilterMenu').value; // No toLowerCase here, keep exact matching for population
+            const subFilter = document.getElementById('setupFilterSubMenu');
+            const currentSub = subFilter.value;
+
+            const subSet = new Set();
+
+            // globalSetupData is available
+            globalSetupData.forEach(row => {
+                // If mainVal is empty (All), show all sub menus? Or maybe dependent means we show relevant ones.
+                // Usually "All" main menus -> "All" sub menus.
+                // If specific main menu -> only sub menus for that main menu.
+                const rowMain = row[0] || '';
+                const rowSub = row[1] || '';
+
+                if (rowSub) {
+                    if (!mainVal || rowMain === mainVal) {
+                        subSet.add(rowSub);
+                    }
+                }
+            });
+
+            subFilter.innerHTML = '<option value="">All Sub Menus</option>';
+            subSet.forEach(val => {
+                const opt = document.createElement('option');
+                opt.value = val;
+                opt.textContent = val;
+                subFilter.appendChild(opt);
+            });
+
+            // Attempt to restore selection
+            if (currentSub && subSet.has(currentSub)) {
+                subFilter.value = currentSub;
+            } else {
+                subFilter.value = "";
+            }
+
+            if (shouldFilterTable) {
+                window.filterSetupTable();
+            }
+        };
+
+        window.filterSetupTable = function () {
+            var mainVal = document.getElementById('setupFilterMenu').value.toLowerCase();
+            var subVal = document.getElementById('setupFilterSubMenu').value.toLowerCase();
+
+            var filteredData = globalSetupData.filter(function (row) {
+                var menu = (row[0] || '').toLowerCase();
+                var sub = (row[1] || '').toLowerCase();
+                var matchesMain = !mainVal || menu === mainVal;
+                var matchesSub = !subVal || sub === subVal;
+                return matchesMain && matchesSub;
+            });
+
+            renderSetupTable(filteredData);
+        };
+
+
+        function renderSetupTable(data) {
+            const tbody = document.getElementById('setupMgmtBody');
+            tbody.innerHTML = '';
+
+            data.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                let displayQT = row[6] || '';
+                if (!displayQT.includes('),(') && row[7]) {
+                    displayQT = `(${row[6]}),(${row[7]})`;
+                }
+
+                tr.innerHTML = `
+                    <td>${escapeHtml(row[0] || '')}</td>
+                    <td>${escapeHtml(row[1] || '')}</td>
+                    <td>${escapeHtml(row[2] || '')}</td>
+                    <td>${escapeHtml(row[3] || '')}</td>
+                    <td>${escapeHtml(row[4] || '')}</td>
+                    <!-- Range skipped -->
+                    <td>${escapeHtml(displayQT)}</td>
+                    <td>
+                        <div class="action-btn-group">
+                            <button class="btn-mini btn-edit" onclick="window.editSetupRow(${index})"><i class="fas fa-edit"></i></button>
+                            <button class="btn-mini btn-delete" onclick="window.deleteSetupRow(${index})"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.openSetupModal = function (index = null) {
+            editSetupIndex = index;
+            document.getElementById('setupModalTitle').textContent = index !== null ? 'Edit Setup' : 'Add New Setup(s)';
+            document.getElementById('setupModalMessage').innerHTML = '';
+
+            const tbody = document.querySelector('#setupInputTable tbody');
+            tbody.innerHTML = '';
+
+            if (index !== null) {
+                // Edit Mode: Load ONE row with existing data
+                const row = globalSetupData[index];
+                let combined = row[6] || '';
+                let question = '';
+                let table = '';
+                let match = combined.match(/^\((.*?)\),\((.*?)\)$/);
+                if (match) {
+                    question = match[1];
+                    table = match[2];
+                } else if (row[7]) {
+                    question = row[6];
+                    table = row[7];
+                } else {
+                    question = combined;
+                }
+
+                window.addSetupRow({
+                    mainMenu: row[0],
+                    subMenu: row[1],
+                    sheetName: row[2],
+                    dbLink: row[3],
+                    externalId: row[4],
+                    question: question,
+                    table: table
+                });
+            } else {
+                // Add Mode: Add one empty row to start
+                window.addSetupRow();
+            }
+
+            document.getElementById('setupModal').style.display = 'block';
+        };
+
+        window.addSetupRow = function (data = {}) {
+            const tbody = document.querySelector('#setupInputTable tbody');
+            const tr = document.createElement('tr');
+
+            tr.innerHTML = `
+                <td><input type="text" class="form-control input-sm setup-main" value="${escapeHtml(data.mainMenu || '')}"></td>
+                <td><input type="text" class="form-control input-sm setup-sub" value="${escapeHtml(data.subMenu || '')}"></td>
+                <td><input type="text" class="form-control input-sm setup-sheet" value="${escapeHtml(data.sheetName || '')}"></td>
+                <td><input type="text" class="form-control input-sm setup-db" value="${escapeHtml(data.dbLink || '')}"></td>
+                <td><input type="text" class="form-control input-sm setup-ext" value="${escapeHtml(data.externalId || '')}"></td>
+                <td><input type="text" class="form-control input-sm setup-q" placeholder="(...)" value="${escapeHtml(data.question || '')}"></td>
+                <td><input type="text" class="form-control input-sm setup-t" placeholder="(...)" value="${escapeHtml(data.table || '')}"></td>
+                <td style="text-align: center;">
+                    <button class="btn-mini btn-delete" onclick="this.closest('tr').remove()"><i class="fas fa-trash"></i></button>
+                    <button class="btn-mini btn-edit" onclick="window.addSetupRow()" style="margin-left: 5px;"><i class="fas fa-plus"></i></button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        };
+
+        window.closeSetupModal = function () {
+            document.getElementById('setupModal').style.display = 'none';
+        };
+
+        window.saveSetupEntry = function () {
+            // Collect Data
+            const rows = document.querySelectorAll('#setupInputTable tbody tr');
+            const entries = [];
+
+            for (let tr of rows) {
+                const mainMenu = tr.querySelector('.setup-main').value.trim();
+                const subMenu = tr.querySelector('.setup-sub').value.trim();
+                const sheetName = tr.querySelector('.setup-sheet').value.trim();
+                const dbLink = tr.querySelector('.setup-db').value.trim();
+                const externalId = tr.querySelector('.setup-ext').value.trim();
+                const qVal = tr.querySelector('.setup-q').value.trim();
+                const tVal = tr.querySelector('.setup-t').value.trim();
+
+                if (!mainMenu || !subMenu) {
+                    continue; // Skip empty rows or warn?
+                }
+
+                let entryViewableVal = "";
+                if (qVal || tVal) {
+                    entryViewableVal = `(${qVal}),(${tVal})`;
+                }
+
+                entries.push({
+                    mainMenu, subMenu, sheetName, dbLink, externalId,
+                    rangeSpec: "",
+                    entryViewable: entryViewableVal
+                });
+
+            }
+
+            if (entries.length === 0) {
+                showPageError('setupModalMessage', "Please add at least one valid entry (Menu & Sub Menu required)");
+                return;
+            }
+
+            // Edit Mode vs Bulk Add
+            window.closeSetupModal();
+            // Show inline loader
+            document.getElementById('setupLoader').style.display = 'flex';
+            document.getElementById('setupTableWrapper').style.display = 'none';
+
+            if (editSetupIndex !== null) {
+                // UPDATE SINGLE
+                const data = entries[0];
+                data.index = parseInt(editSetupIndex);
+                google.script.run
+                    .withSuccessHandler(res => {
+                        if (res.success) loadSetupData();
+                        else {
+                            document.getElementById('setupLoader').style.display = 'none';
+                            document.getElementById('setupTableWrapper').style.display = 'block';
+                            showPageError('setupMessageContainer', res.error);
+                        }
+                    })
+                    .updateMasterSheetEntry(data);
+            } else {
+                // BULK ADD
+                google.script.run
+                    .withSuccessHandler(res => {
+                        if (res.success) loadSetupData();
+                        else {
+                            document.getElementById('setupLoader').style.display = 'none';
+                            document.getElementById('setupTableWrapper').style.display = 'block';
+                            showPageError('setupMessageContainer', res.error);
+                        }
+                    })
+                    .saveBulkMasterSheetEntries(entries);
+            }
+        };
+
+        window.editSetupRow = function (index) {
+            window.openSetupModal(index);
+        };
+
+        window.deleteSetupRow = function (index) {
+            if (!confirm("Delete this setup?")) return;
+            document.getElementById('setupLoader').style.display = 'flex';
+            document.getElementById('setupTableWrapper').style.display = 'none';
+            google.script.run
+                .withSuccessHandler(function (res) {
+                    if (res.success) {
+                        showPageSuccess('setupMessageContainer', "Deleted successfully");
+                        loadSetupData();
+                    } else {
+                        showPageError('setupMessageContainer', res.error);
+                        document.getElementById('setupLoader').style.display = 'none';
+                        document.getElementById('setupTableWrapper').style.display = 'block';
+                    }
+                })
+                .deleteMasterSheetEntry(index);
+        };
+
+        // --- CREATE BUTTON (CREATE BUTTON SHEET) LOGIC ---
+
+        var globalButtonData = [];
+        var editButtonIndex = null;
+
+        function loadButtonData() {
+            // Show inline loader, hide table
+            document.getElementById('buttonLoader').style.display = 'flex';
+            document.getElementById('buttonTableWrapper').style.display = 'none';
+            document.getElementById('buttonMessageContainer').innerHTML = '';
+
+            // Fetch CreateButton Sheet Data
+            google.script.run
+                .withSuccessHandler(function (response) {
+                    // Hide loader, show table
+                    document.getElementById('buttonLoader').style.display = 'none';
+                    document.getElementById('buttonTableWrapper').style.display = 'block';
+
+                    if (response.success) {
+                        globalButtonData = response.data || [];
+                        renderButtonTable(globalButtonData);
+                    } else {
+                        showPageError('buttonMessageContainer', response.error || "Failed to load button data");
+                    }
+                })
+                .withFailureHandler(function (error) {
+                    document.getElementById('buttonLoader').style.display = 'none';
+                    document.getElementById('buttonTableWrapper').style.display = 'block';
+                    showPageError('buttonMessageContainer', 'Failed to load button data: ' + error);
+                })
+                .getCreateButtonData();
+
+            // Preload menus data if not already loaded (Optimization)
+            if (Object.keys(menusData).length === 0) {
+                google.script.run.withSuccessHandler(res => {
+                    if (res.menus) {
+                        menusData = res.menus;
+                    }
+                }).getAllMenusAndButtons();
+            }
+
+            // Ensure globalSetupData (Master Sheet) is loaded for filtering logic
+            if (!globalSetupData || globalSetupData.length === 0) {
+                google.script.run.withSuccessHandler(res => {
+                    if (res.success) {
+                        globalSetupData = res.data || [];
+                    }
+                }).getMasterSheetData();
+            }
+        }
+
+        function renderButtonTable(data) {
+            const tbody = document.getElementById('buttonMgmtBody');
+            tbody.innerHTML = '';
+
+            data.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${escapeHtml(row[0] || '')}</td>
+                    <td>${escapeHtml(row[1] || '')}</td>
+                    <td>${escapeHtml(row[2] || '')}</td>
+                    <td>${escapeHtml(row[3] || '')}</td>
+                    <td>
+                        <div class="action-btn-group">
+                            <button class="btn-mini btn-edit" onclick="window.editButtonRow(${index})"><i class="fas fa-edit"></i></button>
+                            <button class="btn-mini btn-delete" onclick="window.deleteButtonRow(${index})"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.openButtonModal = function (index = null) {
+            editButtonIndex = index;
+            document.getElementById('buttonModalTitle').textContent = index !== null ? 'Edit Button' : 'Add New Button(s)';
+
+            // Ensure Menu Data is loaded for dropdowns
+            if (Object.keys(menusData).length === 0) {
+                // Try to fetch if empty
+                google.script.run.withSuccessHandler(res => {
+                    if (res.menus) {
+                        menusData = res.menus;
+                        _initButtonModal(index);
+                    }
+                }).getAllMenusAndButtons();
+            } else {
+                _initButtonModal(index);
+            }
+        };
+
+        function _initButtonModal(index) {
+            const tbody = document.querySelector('#buttonInputTable tbody');
+            tbody.innerHTML = '';
+
+            if (index !== null) {
+                const row = globalButtonData[index];
+                window.addButtonRow({
+                    mainMenu: row[0],
+                    subMenu: row[1],
+                    buttonName: row[2],
+                    extra: row[3]
+                });
+            } else {
+                window.addButtonRow();
+            }
+            document.getElementById('buttonModal').style.display = 'block';
+        }
+
+        // Helper to get valid menus based on Sheet Name existence
+        function getValidMenusWithSheet() {
+            const valid = {}; // Main -> Set(Sub)
+            // globalSetupData: [Menu, SubMenu, SheetName, ...]
+            if (globalSetupData && globalSetupData.length > 0) {
+                globalSetupData.forEach(row => {
+                    const m = row[0];
+                    const s = row[1];
+                    const sheetName = row[2];
+                    if (m && s && sheetName && sheetName.toString().trim() !== "") {
+                        if (!valid[m]) valid[m] = new Set();
+                        valid[m].add(s);
+                    }
+                });
+            }
+            return valid;
+        }
+
+        window.addButtonRow = function (data = {}) {
+            const tbody = document.querySelector('#buttonInputTable tbody');
+            const tr = document.createElement('tr');
+
+            // Build Main Menu Options (Filtered)
+            const validMenus = getValidMenusWithSheet();
+            let mainOpts = '<option value="">Select Menu</option>';
+
+            // Sort keys for better UX
+            const sortedKeys = Object.keys(validMenus).sort();
+
+            sortedKeys.forEach(m => {
+                const sel = (data.mainMenu === m) ? 'selected' : '';
+                mainOpts += `<option value="${escapeHtml(m)}" ${sel}>${escapeHtml(m)}</option>`;
+            });
+
+            tr.innerHTML = `
+                <td>
+                    <select class="form-control input-sm btn-main" onchange="window.onBtnMainChange(this)">
+                        ${mainOpts}
+                    </select>
+                </td>
+                <td>
+                    <select class="form-control input-sm btn-sub">
+                        <option value="">Select Sub Menu</option>
+                    </select>
+                </td>
+                <td><input type="text" class="form-control input-sm btn-name" value="${escapeHtml(data.buttonName || '')}"></td>
+                <td><input type="text" class="form-control input-sm btn-extra" value="${escapeHtml(data.extra || '')}"></td>
+                <td style="text-align: center;">
+                    <button class="btn-mini btn-delete" onclick="this.closest('tr').remove()"><i class="fas fa-trash"></i></button>
+                    <button class="btn-mini btn-edit" onclick="window.addButtonRow()" style="margin-left: 5px;"><i class="fas fa-plus"></i></button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+
+            // If data exists, populate submenu
+            if (data.mainMenu) {
+                const mainSelect = tr.querySelector('.btn-main');
+                window.onBtnMainChange(mainSelect, data.subMenu);
+            }
+        };
+
+        window.onBtnMainChange = function (selectElem, currentSubVal = null) {
+            const tr = selectElem.closest('tr');
+            const mainVal = selectElem.value;
+            const subSelect = tr.querySelector('.btn-sub');
+
+            subSelect.innerHTML = '<option value="">Select Sub Menu</option>';
+
+            const validMenus = getValidMenusWithSheet();
+
+            if (mainVal && validMenus[mainVal]) {
+                const subSets = validMenus[mainVal];
+                // sort subs
+                const sortedSubs = Array.from(subSets).sort();
+
+                sortedSubs.forEach(sub => {
+                    const sel = (currentSubVal === sub) ? 'selected' : '';
+                    const opt = document.createElement('option');
+                    opt.value = sub;
+                    opt.textContent = sub;
+                    if (sel) opt.selected = true;
+                    subSelect.appendChild(opt);
+                });
+            }
+        };
+
+        window.closeButtonModal = function () {
+            document.getElementById('buttonModal').style.display = 'none';
+        };
+
+        window.saveButtonEntry = function () {
+            const rows = document.querySelectorAll('#buttonInputTable tbody tr');
+            const entries = [];
+
+            for (let tr of rows) {
+                const mainMenu = tr.querySelector('.btn-main').value;
+                const subMenu = tr.querySelector('.btn-sub').value;
+                const buttonName = tr.querySelector('.btn-name').value.trim();
+                const extra = tr.querySelector('.btn-extra').value.trim();
+
+                if (!mainMenu || !subMenu || !buttonName) continue;
+
+                entries.push({
+                    mainMenu, subMenu, buttonName, extra
+                });
+            }
+
+            if (entries.length === 0) {
+                showPageError('buttonModalMessage', "Please add at least one valid entry");
+                return;
+            }
+
+            window.closeButtonModal();
+            document.getElementById('buttonLoader').style.display = 'flex';
+            document.getElementById('buttonTableWrapper').style.display = 'none';
+
+            if (editButtonIndex !== null) {
+                const data = entries[0];
+                data.index = parseInt(editButtonIndex);
+                google.script.run
+                    .withSuccessHandler(res => {
+                        if (res.success) loadButtonData();
+                        else {
+                            document.getElementById('buttonLoader').style.display = 'none';
+                            document.getElementById('buttonTableWrapper').style.display = 'block';
+                            showPageError('buttonMessageContainer', res.error);
+                        }
+                    })
+                    .updateCreateButtonEntry(data);
+            } else {
+                google.script.run
+                    .withSuccessHandler(res => {
+                        if (res.success) loadButtonData();
+                        else {
+                            document.getElementById('buttonLoader').style.display = 'none';
+                            document.getElementById('buttonTableWrapper').style.display = 'block';
+                            showPageError('buttonMessageContainer', res.error);
+                        }
+                    })
+                    .saveBulkCreateButtonEntries(entries);
+            }
+        };
+
+        window.editButtonRow = function (index) {
+            window.openButtonModal(index);
+        };
+
+        window.deleteButtonRow = function (index) {
+            if (!confirm("Delete this button?")) return;
+            document.getElementById('buttonLoader').style.display = 'flex';
+            document.getElementById('buttonTableWrapper').style.display = 'none';
+            google.script.run
+                .withSuccessHandler(function (res) {
+                    if (res.success) {
+                        showPageSuccess('buttonMessageContainer', "Deleted successfully");
+                        loadButtonData();
+                    } else {
+                        showPageError('buttonMessageContainer', res.error);
+                        document.getElementById('buttonLoader').style.display = 'none';
+                        document.getElementById('buttonTableWrapper').style.display = 'block';
+                    }
+                })
+                .deleteCreateButtonEntry(index);
+        };
+
+        function showSuccess(msg) {
+            const container = document.getElementById('messageContainer');
+            container.innerHTML = `<div class="success-message">${msg}</div>`;
+            setTimeout(() => { container.innerHTML = ''; }, 3000);
+        }
+
+        // Page-specific success message
+        function showPageSuccess(containerId, message) {
+            var container = document.getElementById(containerId);
+            if (container) {
+                container.innerHTML = '<div class="page-error-message" style="background: #d4edda; border-color: #c3e6cb; color: #155724;"><i class="fas fa-check-circle"></i> ' + message + '</div>';
+                setTimeout(function () {
+                    container.innerHTML = '';
+                }, 3000);
+            }
+        }
+
+        function getThumbnailUrl(driveUrl) {
+            try {
+                // simple regex to extract ID
+                var match = driveUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                if (match && match[1]) {
+                    // Use Google Drive thumbnail URL with size 100
+                    return 'https://drive.google.com/thumbnail?id=' + match[1] + '&sz=s100';
+                }
+                // fallback if it's already a direct link or different format
+                return driveUrl;
+            } catch (e) {
+                return '';
+            }
+        }
+
+        function openCreateUserModal() {
+            isEditMode = false;
+            currentEditingUserId = null;
+            document.querySelector('#createUserModal h2').textContent = 'Create New User';
+
+            // Show submit button, ensure it says "Create User"
+            var btn = document.querySelector('#createUserModal .btn-primary');
+            btn.textContent = 'Create User';
+            btn.style.display = 'block';
+
+            // Enable user ID field
+            document.getElementById('userId').disabled = false;
+
+            document.getElementById('createUserModal').style.display = 'block';
+            document.getElementById('createUserForm').reset();
+
+            // Trigger role change to update Access Type visibility
+            toggleAccessTypeVisibility();
+
+            // Ensure role change always toggles the column (replace previous listeners safely)
+            var roleSelect = document.getElementById('role');
+            if (roleSelect) {
+                roleSelect.onchange = toggleAccessTypeVisibility;
+            }
+
+            // Reset permission checks
+            var checkBoxes = document.querySelectorAll('input[type="checkbox"]');
+            for (var i = 0; i < checkBoxes.length; i++) {
+                checkBoxes[i].checked = false;
+            }
+
+            loadPermissionsTree(); // This now rebuilds the table
+        }
+
+        // Function to prepare Edit Modal
+        window.prepareEditUser = function (userId) {
+            console.log("Editing user: " + userId);
+
+            var user = null;
+            for (var i = 0; i < globalUsers.length; i++) {
+                if (globalUsers[i].userId === userId) {
+                    user = globalUsers[i];
+                    break;
+                }
+            }
+
+            if (!user) {
+                showError("User data not found for editing");
+                return;
+            }
+
+            isEditMode = true;
+            currentEditingUserId = userId;
+
+            // UI Updates
+            document.querySelector('#createUserModal h2').textContent = 'Edit User';
+            var btn = document.querySelector('#createUserModal .btn-primary');
+            btn.textContent = 'Update User';
+            btn.style.display = 'block';
+
+            document.getElementById('createUserModal').style.display = 'block';
+            document.getElementById('createUserForm').reset();
+
+            // Show Loader
+            var loader = document.getElementById('modalLoadingOverlay');
+            if (loader) loader.style.display = 'flex';
+
+            // Populate Fields
+            document.getElementById('userId').value = user.userId;
+            document.getElementById('userId').disabled = true; // Cannot edit email
+
+            document.getElementById('password').value = user.password;
+            document.getElementById('displayName').value = user.displayName;
+
+            // Set role case-insensitively to match select values
+            var roleToSet = user.role ? user.role.trim().toLowerCase() : 'user';
+            document.getElementById('role').value = roleToSet;
+
+            // Trigger role change to update Access Type visibility
+            toggleAccessTypeVisibility();
+
+            // Ensure role change always toggles the column (replace previous listeners safely)
+            var roleSelect = document.getElementById('role');
+            if (roleSelect) {
+                roleSelect.onchange = toggleAccessTypeVisibility;
+            }
+
+            document.getElementById('manager').value = user.manager;
+            document.getElementById('mobileNumber').value = user.mobileNumber || '';
+            document.getElementById('metricsVisibility').value = user.metricsVisible || 'No';
+
+            // Load permissions and then check the boxes
+            loadPermissionsTree(function () {
+                // Fetch actual permissions for this user
+                google.script.run
+                    .withSuccessHandler(function (response) {
+                        if (response.success) {
+                            applyUserPermissionsToTree(response.permissions);
+                        } else {
+                            console.error("Error fetching permissions for user:", response.error);
+                        }
+                        // Hide Loader
+                        if (loader) loader.style.display = 'none';
+                    })
+                    .withFailureHandler(function (err) {
+                        console.error("Error in prepareEditUser:", err);
+                        if (loader) loader.style.display = 'none';
+                    })
+                    .getUserPermissions(userId);
+            });
+        };
+
+        // View Permissions (Read Only)
+        window.viewUserPermissions = function (userId) {
+            window.prepareEditUser(userId);
+            document.querySelector('#createUserModal h2').textContent = 'View Permissions (Read Only)';
+            document.querySelector('#createUserModal .btn-primary').style.display = 'none'; // Hide save button
+
+            // Optional: Disable all inputs to make it truly look read-only
+            // For now, hiding the save button is sufficient for "View"
+        };
+
+        function applyUserPermissionsToTree(permissions) {
+            // Reset only the checkboxes inside the permission tree
+            var permissionTree = document.getElementById('permissionTree');
+            if (permissionTree) {
+                // uncheck all checkboxes that belong to permission tree except selectAll will be handled separately
+                var allCheckboxes = permissionTree.querySelectorAll('input[type="checkbox"]');
+                allCheckboxes.forEach(function (cb) {
+                    cb.checked = false;
+                });
+
+                // Reset access-type checkboxes (class name used in displayPermissionsTree)
+                var allAccessInputs = permissionTree.querySelectorAll('.access-type-checkbox');
+                allAccessInputs.forEach(function (ai) {
+                    ai.checked = false;
+                });
+
+                // Reset selectAll explicitly if present
+                var selectAll = document.getElementById('selectAllPermissions');
+                if (selectAll) selectAll.checked = false;
+            }
+
+            if (!permissions || !Array.isArray(permissions)) return;
+
+            for (var p = 0; p < permissions.length; p++) {
+                var perm = permissions[p];
+                // Format: {mainMenu, subMenu, buttons: [], accessType: 'Yes'|''
+                var dataAttrSelector = 'input[data-main-menu="' + perm.mainMenu + '"][data-sub-menu="' + perm.subMenu + '"]';
+                var subCheckbox = document.querySelector(dataAttrSelector);
+
+                if (subCheckbox) {
+                    subCheckbox.checked = true;
+
+                    // Also check Main Menu (using ID pattern main_<sanitized>)
+                    var mainMenuId = 'main_' + sanitizeId(perm.mainMenu);
+                    var mainCheckbox = document.getElementById(mainMenuId);
+                    if (mainCheckbox) mainCheckbox.checked = true;
+
+                    // Check Buttons
+                    if (perm.buttons && perm.buttons.length > 0) {
+                        var subId = subCheckbox.id;
+                        for (var b = 0; b < perm.buttons.length; b++) {
+                            var btnName = perm.buttons[b];
+                            var btnSelector = 'input[data-submenu="' + subId + '"][data-button-name="' + btnName + '"]';
+                            var btnCheckbox = document.querySelector(btnSelector);
+                            if (btnCheckbox) btnCheckbox.checked = true;
+                        }
+                    }
+
+                    // Populate Access Type by ID 'access_' + subId
+                    var accessInputId = 'access_' + subCheckbox.id;
+                    var accessInput = document.getElementById(accessInputId);
+                    if (accessInput && (perm.accessType === 'Yes' || perm.accessType === 'Full')) {
+                        accessInput.checked = true;
+                    }
+                }
+            }
+        }
+
+        // Toggle Access Type column visibility based on role
+        function toggleAccessTypeVisibility() {
+            var roleSelect = document.getElementById('role');
+            if (!roleSelect) return;
+            var role = roleSelect.value ? roleSelect.value.trim().toLowerCase() : '';
+            console.log('Toggling Access Type visibility for role: ' + role);
+
+            var treeContainer = document.getElementById('permissionTree');
+            if (!treeContainer) return;
+
+            if (role === 'user') {
+                treeContainer.classList.add('show-access-column');
+            } else {
+                treeContainer.classList.remove('show-access-column');
+            }
+        }
+
+        // Show custom alert
+        window.showCustomAlert = function (message, type) {
+            document.getElementById('customAlertMessage').textContent = message;
+            document.getElementById('customAlertOverlay').style.display = 'flex';
+
+            // Toggle buttons based on type
+            if (type === 'confirm') {
+                document.getElementById('alertOkBtn').style.display = 'none';
+                document.getElementById('confirmDeleteBtn').style.display = 'block';
+                document.getElementById('confirmCancelBtn').style.display = 'block';
+                // Ensure delete is on the right
+                document.getElementById('customAlertButtons').appendChild(document.getElementById('confirmDeleteBtn'));
+            } else {
+                document.getElementById('alertOkBtn').style.display = 'inline-block';
+                document.getElementById('confirmDeleteBtn').style.display = 'none';
+                document.getElementById('confirmCancelBtn').style.display = 'none';
+            }
+        };
+
+        window.showCustomConfirm = function (message, onConfirm) {
+            window.showCustomAlert(message, 'confirm');
+            var deleteBtn = document.getElementById('confirmDeleteBtn');
+
+            // Replace the button to clear previous listeners
+            var newDeleteBtn = deleteBtn.cloneNode(true);
+            deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
+
+            newDeleteBtn.onclick = function () {
+                window.hideCustomAlert();
+                onConfirm();
+            };
+        };
+
+        window.hideCustomAlert = function () {
+            document.getElementById('customAlertOverlay').style.display = 'none';
+        };
+
+        // Remove redundant DOMContentLoaded listener for role as it's handled in modal open functions
+
+        // Delete user function
+        window.deleteUser = function (userId) {
+            var confirmMsg = 'Are you sure you want to delete user "' + userId + '"?\n\nThis will permanently remove the user and ALL their permissions.';
+
+            window.showCustomConfirm(confirmMsg, function () {
+                // Show loader in table
+                var tableContainer = document.getElementById('usersTableContent');
+                if (tableContainer) {
+                    tableContainer.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> <div style="margin-top: 10px;">Deleting user...</div></div>';
+                }
+
+                google.script.run
+                    .withSuccessHandler(function (response) {
+                        if (response.error) {
+                            if (tableContainer) {
+                                tableContainer.innerHTML = '<div class="error-message">' + response.error + '<br><button onclick="loadUsers()" class="btn-primary" style="margin-top:10px;">Retry</button></div>';
+                            }
+                            window.showCustomAlert(response.error);
+                        } else {
+                            loadUsers(function () {
+                                window.showCustomAlert('User deleted successfully!');
+                            });
+                        }
+                    })
+                    .withFailureHandler(function (error) {
+                        if (tableContainer) {
+                            tableContainer.innerHTML = '<div class="error-message">Failed: ' + error + '<br><button onclick="loadUsers()" class="btn-primary" style="margin-top:10px;">Retry</button></div>';
+                        }
+                        window.showCustomAlert('Failed: ' + error);
+                    })
+                    .deleteUser(userId);
+            });
+        };
+
+        function closeCreateUserModal() {
+            document.getElementById('createUserModal').style.display = 'none';
+        }
+
+        // Make functions globally available
+        window.openCreateUserModal = openCreateUserModal;
+        window.closeCreateUserModal = closeCreateUserModal;
+
+        // Updated loadPermissionsTree to accept callback
+        function loadPermissionsTree(callback) {
+            console.log('Loading permissions tree...');
+            google.script.run
+                .withSuccessHandler(function (response) {
+                    displayPermissionsTree(response);
+                    if (callback) callback();
+                })
+                .withFailureHandler(function (error) {
+                    console.error('Failed to load permissions:', error);
+                    document.getElementById('permissionTree').innerHTML =
+                        '<div class="error-message">Failed to load permissions</div>';
+                })
+                .getAllMenusAndButtons();
+        }
+
+        function displayPermissionsTree(response) {
+            console.log('Display permissions tree response:', response);
+            if (response.error) {
+                document.getElementById('permissionTree').innerHTML =
+                    '<div class="error-message">' + response.error + '</div>';
+                return;
+            }
+
+            menusData = response.menus;
+            buttonsData = response.buttons;
+
+            var tableHtml = '<table class="permissions-table">';
+            tableHtml += '<thead><tr>';
+            tableHtml += '<th>';
+            tableHtml += '<div style="display: flex; align-items: center; gap: 5px;">';
+            tableHtml += '<input type="checkbox" id="selectAllPermissions" onchange="window.toggleAllPermissions()">';
+            tableHtml += '<span>Menu</span>';
+            tableHtml += '</div>';
+            tableHtml += '</th>';
+            tableHtml += '<th>Sub Menu</th>';
+            tableHtml += '<th>Button</th>';
+            tableHtml += '<th class="access-type-col">Access Type</th>';
+            tableHtml += '</tr></thead>';
+            tableHtml += '<tbody>';
+
+            for (var mainMenu in menusData) {
+                var subMenus = menusData[mainMenu];
+                var menuId = sanitizeId(mainMenu);
+                var mainMenuCheckboxId = 'main_' + menuId;
+                var rowSpan = subMenus.length;
+
+                // Keep the first row separate to handle RowSpan
+                if (subMenus.length === 0) continue;
+
+                for (var s = 0; s < subMenus.length; s++) {
+                    var subMenu = subMenus[s];
+                    var subMenuId = 'sub_' + sanitizeId(mainMenu + '_' + subMenu);
+                    var buttonKey = mainMenu + '||' + subMenu;
+                    var buttons = buttonsData[buttonKey] || [];
+
+                    var rowClass = 'group-' + menuId;
+                    var rowStyle = ''; // All rows visible by default since dropdowns are removed
+
+                    tableHtml += '<tr class="' + rowClass + '" ' + rowStyle + '>';
+
+                    // First Column: Main Menu (Only for the first submenu row)
+                    if (s === 0) {
+                        tableHtml += '<td rowspan="' + rowSpan + '">';
+                        tableHtml += '<div class="checkbox-wrapper">';
+                        // Re-add Toggle Icon (Default Expanded)
+                        tableHtml += '<i class="fas fa-chevron-down toggle-icon" id="icon_' + menuId + '" onclick="window.toggleGroup(\'' + menuId + '\')"></i>';
+                        tableHtml += '<input type="checkbox" id="' + mainMenuCheckboxId + '" data-main-menu="' + escapeHtml(mainMenu) + '" onchange="window.toggleUserMgmtMainMenu(\'' + mainMenuCheckboxId + '\', this.getAttribute(\'data-main-menu\'))">';
+                        tableHtml += '<label for="' + mainMenuCheckboxId + '" style="font-weight:bold;">' + escapeHtml(mainMenu) + '</label>';
+                        tableHtml += '</div>';
+                        tableHtml += '</td>';
+                    }
+
+                    // Second Column: Sub Menu
+                    tableHtml += '<td>';
+                    tableHtml += '<div class="checkbox-wrapper">';
+                    tableHtml += '<span style="width:10px; display:inline-block;"></span>'; // Small spacer
+                    tableHtml += '<input type="checkbox" id="' + subMenuId + '" data-main-menu="' + escapeHtml(mainMenu) + '" data-sub-menu="' + escapeHtml(subMenu) + '" onchange="window.toggleUserMgmtSubMenu(\'' + subMenuId + '\')">';
+                    tableHtml += '<label for="' + subMenuId + '">' + escapeHtml(subMenu) + '</label>';
+                    tableHtml += '</div>';
+                    tableHtml += '</td>';
+
+                    // Third Column: Buttons
+                    tableHtml += '<td>';
+                    if (buttons.length > 0) {
+                        tableHtml += '<div id="btns_' + subMenuId + '" class="button-list">';
+                        for (var i = 0; i < buttons.length; i++) {
+                            var button = buttons[i];
+                            var buttonId = 'btn_' + sanitizeId(mainMenu + '_' + subMenu + '_' + button);
+                            tableHtml += '<div class="button-checkbox">';
+                            tableHtml += '<input type="checkbox" id="' + buttonId + '" data-submenu="' + subMenuId + '" data-button-name="' + escapeHtml(button) + '">';
+                            tableHtml += '<label for="' + buttonId + '">' + escapeHtml(button) + '</label>';
+                            tableHtml += '</div>';
+                        }
+                        tableHtml += '</div>';
+                    }
+                    tableHtml += '</td>';
+
+                    // Fourth Column: Access Type
+                    var accessInputId = 'access_' + subMenuId;
+                    tableHtml += '<td class="access-type-col">';
+                    tableHtml += '<div class="checkbox-wrapper">';
+                    tableHtml += '<input type="checkbox" id="' + accessInputId + '" class="access-type-checkbox" value="Full" onchange="window.onAccessTypeChange(\'' + subMenuId + '\', this)">';
+                    tableHtml += '<label for="' + accessInputId + '">Full</label>';
+                    tableHtml += '</div>';
+                    tableHtml += '</td>';
+
+                    tableHtml += '</tr>';
+                }
+            }
+
+            tableHtml += '</tbody>';
+            tableHtml += '</table>';
+
+            document.getElementById('permissionTree').innerHTML = tableHtml;
+
+            // Ensure correct visibility after building the table
+            toggleAccessTypeVisibility();
+        }
+
+        window.toggleGroup = function (menuId) {
+            var icon = document.getElementById('icon_' + menuId);
+            var isExpanding = icon.classList.contains('collapsed');
+
+            // Switch state
+            if (isExpanding) {
+                icon.classList.remove('collapsed');
+            } else {
+                icon.classList.add('collapsed');
+            }
+
+            var rows = document.querySelectorAll('tr.group-' + menuId);
+            var firstRow = rows[0];
+            var menuCell = firstRow.cells[0]; // The one with rowspan
+
+            if (isExpanding) {
+                // Expanding
+                menuCell.setAttribute('rowspan', rows.length);
+                firstRow.cells[1].style.visibility = 'visible'; // Sub Menu
+                firstRow.cells[2].style.visibility = 'visible'; // Buttons
+                // Access Type (cell index 3) is NOT touched if it's already shown by role
+
+                // Show other rows
+                for (var i = 1; i < rows.length; i++) {
+                    rows[i].style.display = 'table-row';
+                }
+            } else {
+                // Collapsing
+                menuCell.setAttribute('rowspan', 1);
+
+                // Hide Sub Menu and Button content in the FIRST row
+                // Using visibility: hidden or display: none on the cell? 
+                // User says "Sub-menu and Buttons should disappear". 
+                // If we use display:none, the Access Type cell shifts left.
+                // We should probably hide the content inside the cells or keep the cells but hide content.
+                // However, usually "collapse" means the row only shows the Main Menu and Access Type 1.
+                // To keep Access Type in its column position, we just hide cells[1] and cells[2].
+                firstRow.cells[1].style.visibility = 'hidden';
+                firstRow.cells[2].style.visibility = 'hidden';
+
+                // Hide other rows completely
+                for (var i = 1; i < rows.length; i++) {
+                    rows[i].style.display = 'none';
+                }
+            }
+        };
+
+        // window.toggleButtons removed as it is no longer used
+
+        function toggleUserMgmtMainMenu(mainMenuId, mainMenu) {
+            var checkbox = document.getElementById(mainMenuId);
+            var isChecked = checkbox.checked;
+
+            // Toggle all submenus under this main menu
+            var subMenus = document.querySelectorAll('input[data-main-menu="' + mainMenu + '"]');
+            for (var i = 0; i < subMenus.length; i++) {
+                subMenus[i].checked = isChecked;
+
+                // For Main Menu, we STILL want to toggle buttons under each submenu
+                var buttons = document.querySelectorAll('input[data-submenu="' + subMenus[i].id + '"]');
+                for (var j = 0; j < buttons.length; j++) {
+                    buttons[j].checked = isChecked;
+                }
+            }
+        }
+
+        function toggleUserMgmtSubMenu(subMenuId) {
+            // Updated: Sub-menu checkbox click only affects itself, not child buttons
+            // (Buttons list remains unchanged)
+            console.log('Sub-menu toggled: ' + subMenuId);
+        }
+
+        function toggleAllPermissions() {
+            var selectAllCheckbox = document.getElementById('selectAllPermissions');
+            var isChecked = selectAllCheckbox.checked;
+
+            var allCheckboxes = document.querySelectorAll('#permissionTree input[type="checkbox"]');
+            for (var i = 0; i < allCheckboxes.length; i++) {
+                if (allCheckboxes[i] !== selectAllCheckbox) {
+                    allCheckboxes[i].checked = isChecked;
+                }
+            }
+        }
+
+        function onAccessTypeChange(subMenuId, checkbox) {
+            if (checkbox.checked) {
+                // If user checks Full, check the Sub Menu, Main Menu AND ALL Buttons
+                var subCheckbox = document.getElementById(subMenuId);
+                if (subCheckbox) {
+                    subCheckbox.checked = true;
+
+                    // Check Main Menu
+                    var mainMenu = subCheckbox.getAttribute('data-main-menu');
+                    var mainMenuCheckbox = document.querySelector('input[data-main-menu="' + mainMenu + '"][id^="main_"]');
+                    if (mainMenuCheckbox && !mainMenuCheckbox.checked) {
+                        mainMenuCheckbox.checked = true;
+                    }
+
+                    // Check ALL Buttons for this Sub Menu
+                    var buttons = document.querySelectorAll('input[data-submenu="' + subMenuId + '"]');
+                    for (var i = 0; i < buttons.length; i++) {
+                        buttons[i].checked = true;
+                    }
+                }
+            }
+        }
+
+        // Make functions globally available
+        window.toggleUserMgmtMainMenu = toggleUserMgmtMainMenu;
+        window.toggleUserMgmtSubMenu = toggleUserMgmtSubMenu;
+        window.toggleAllPermissions = toggleAllPermissions;
+        window.onAccessTypeChange = onAccessTypeChange;
+
+        function submitCreateUser() {
+            var actionText = isEditMode ? 'Updating user...' : 'Creating user...';
+            console.log('Submitting form: ' + actionText);
+
+            var form = document.getElementById('createUserForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            // Show loading state - Removed as we use table loader now
+            // showMessage('Processing...', 'info');
+
+            var fileInput = document.getElementById('profilePicture');
+            var file = fileInput.files[0];
+
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    var base64Content = e.target.result.split(',')[1];
+                    var fileData = {
+                        name: file.name,
+                        mimeType: file.type,
+                        content: base64Content
+                    };
+                    processUserSubmission(fileData);
+                };
+                reader.onerror = function (error) {
+                    console.error('Error reading file:', error);
+                    showMessage('Error reading file attachment', 'error');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                processUserSubmission(null);
+            }
+        }
+
+        function processUserSubmission(fileData) {
+            var userData = {
+                userId: document.getElementById('userId').value.trim(),
+                password: document.getElementById('password').value,
+                displayName: document.getElementById('displayName').value.trim(),
+                role: document.getElementById('role').value,
+                manager: document.getElementById('manager').value.trim(),
+                mobileNumber: document.getElementById('mobileNumber').value.trim(),
+                metricsVisible: document.getElementById('metricsVisibility').value,
+                fileData: fileData
+            };
+
+            // Collect permissions
+            var permissions = [];
+            // Updated selector since we removed .submenu-header class
+            var checkedSubMenus = document.querySelectorAll('input[data-sub-menu]:checked');
+
+            for (var i = 0; i < checkedSubMenus.length; i++) {
+                var subMenuCheckbox = checkedSubMenus[i];
+                var mainMenu = subMenuCheckbox.getAttribute('data-main-menu');
+                var subMenu = subMenuCheckbox.getAttribute('data-sub-menu');
+                var subMenuId = subMenuCheckbox.id;
+
+                var checkedButtons = document.querySelectorAll('input[data-submenu="' + subMenuId + '"]:checked');
+                var buttonNames = [];
+                for (var j = 0; j < checkedButtons.length; j++) {
+                    buttonNames.push(checkedButtons[j].getAttribute('data-button-name'));
+                }
+
+                permissions.push({
+                    mainMenu: mainMenu,
+                    subMenu: subMenu,
+                    buttons: buttonNames,
+                    accessType: ''
+                });
+
+                // Capture Access Type value
+                var accessInputId = 'access_' + subMenuId;
+                var accessInput = document.getElementById(accessInputId);
+                if (accessInput) {
+                    permissions[permissions.length - 1].accessType = accessInput.checked ? 'Full' : '';
+                } else {
+                    permissions[permissions.length - 1].accessType = '';
+                }
+            }
+
+            console.log('User data:', userData);
+
+            // Determine backend function
+            var taskName = isEditMode ? 'updateUser' : 'createNewUser';
+            var successMsg = isEditMode ? 'User updated successfully!' : 'User created successfully!';
+
+            // 1. Close Modal Immediately
+            window.closeCreateUserModal();
+
+            // 2. Show Local Loader in the Table Container
+            var tableContainer = document.getElementById('usersTableContent');
+            if (tableContainer) {
+                tableContainer.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> <div style="margin-top: 10px;">Processing...</div></div>';
+            }
+
+            google.script.run
+                .withSuccessHandler(function (response) {
+                    if (response.error) {
+                        // If error, likely we need to reload users to restore table or show error in table?
+                        // But wait, if we overwrote the table with loader, and now have error, we should probably try to reload the table or show error there.
+                        if (tableContainer) {
+                            tableContainer.innerHTML = '<div class="error-message">' + response.error + '<br><button onclick="loadUsers()" class="btn-primary" style="margin-top:10px;">Retry</button></div>';
+                        }
+
+                        // Also show alert for visibility
+                        if (typeof parent.displayAlertMessage === 'function') {
+                            parent.displayAlertMessage(response.error, 'danger');
+                        } else if (typeof displayAlertMessage === 'function') {
+                            displayAlertMessage(response.error, 'danger');
+                        } else {
+                            alert('Error: ' + response.error);
+                        }
+                    } else {
+                        // Success - Reload Users
+                        // loadUsers will replace the loader content with the table
+                        loadUsers(function () {
+                            // Show success alert
+                            if (typeof parent.displayAlertMessage === 'function') {
+                                parent.displayAlertMessage(successMsg, 'success');
+                            } else if (typeof displayAlertMessage === 'function') {
+                                displayAlertMessage(successMsg, 'success');
+                            }
+                        });
+                    }
+                })
+                .withFailureHandler(function (error) {
+                    if (tableContainer) {
+                        tableContainer.innerHTML = '<div class="error-message">Failed: ' + error + '<br><button onclick="loadUsers()" class="btn-primary" style="margin-top:10px;">Retry</button></div>';
+                    }
+                    if (typeof parent.displayAlertMessage === 'function') {
+                        parent.displayAlertMessage('Failed: ' + error, 'danger');
+                    } else if (typeof displayAlertMessage === 'function') {
+                        displayAlertMessage('Failed: ' + error, 'danger');
+                    }
+                })
+            [taskName](userData, permissions);
+        }
+
+        // Make function globally available
+        window.submitCreateUser = submitCreateUser;
+
+        function showMessage(message, type) {
+            var container = document.getElementById('messageContainer');
+            var className = type === 'error' ? 'error-message' :
+                type === 'success' ? 'success-message' : 'loading';
+            container.innerHTML = '<div class="' + className + '">' + message + '</div>';
+
+            if (type === 'success') {
+                setTimeout(function () {
+                    container.innerHTML = '';
+                }, 3000);
+            }
+        }
+
+        function showError(error) {
+            showMessage('Error: ' + error, 'error');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function sanitizeId(str) {
+            return str.replace(/[^a-zA-Z0-9]/g, '_');
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function (event) {
+            var modal = document.getElementById('createUserModal');
+            if (event.target === modal) {
+                window.closeCreateUserModal();
+            }
+        }
+    </script>
+</body>
+
+</html>
