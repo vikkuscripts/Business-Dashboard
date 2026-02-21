@@ -1,1990 +1,4371 @@
-function doGet(request) {
-  return HtmlService.createTemplateFromFile('main')
-      .evaluate()
-      .setTitle("Login Page")
-      .setSandboxMode(HtmlService.SandboxMode.IFRAME);
-}
+<!DOCTYPE html>
+<html lang="en">
 
-// Checks whether the logged‐in user’s project is active
-function license_Status() {
-  var userInfoId = '1xo40DrkDnkEkWjYJ5-SjJ6sZgI26ZdXYNjZuq_rGciE';
-  var now = new Date();
-  var timeZone = Session.getScriptTimeZone();
-  var currentDate = Utilities.formatDate(now, timeZone, "dd/MM/yyyy");
-  var usr = Session.getActiveUser().getEmail();
-  var domain = usr.substring(usr.lastIndexOf("@") + 1);
-  
-  var ss = SpreadsheetApp.openById(userInfoId);
-  var sheet = ss.getSheetByName('Demo');
-  var lastRow = sheet.getLastRow();
-  var data = sheet.getRange(1, 1, lastRow, 4).getValues();
-  
-  // Find row that matches the domain (skipping header row)
-  var matchIndex = data.findIndex((row, idx) => idx > 0 && row[0] === domain);
-  if (matchIndex < 0) {
-    return HtmlService.createHtmlOutput('Your project is not active. Please contact support.');
-  }
-  
-  var projectStatus = data[matchIndex][2];
-  if (projectStatus === 'Active') {
-    return HtmlService.createHtmlOutputFromFile('main')
-      .setSandboxMode(HtmlService.SandboxMode.IFRAME)
-      .setTitle("BAIITBOX-ERP Solutions");
-  } else {
-    return HtmlService.createHtmlOutput('Your project is not active. Please contact support.');
-  }
-}
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
+        integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <!-- Google Material Symbols -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
 
-// Validates login credentials and retrieves user's metrics visibility setting
-function checkLogin(username, password, role) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("User");
-  const data = sheet.getDataRange().getValues();
-  // Assuming "Metrics Visibility" is the 7th column (index 6)
-  const METRICS_VISIBILITY_COLUMN_INDEX = 6; 
-
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === username && data[i][1] === password && String(data[i][3]).toLowerCase() === String(role).toLowerCase()) {
-      
-      // Check the 'Metrics Visibility' column. Treat "Yes" as true, otherwise false.
-      const metricsVisibilityValue = data[i][METRICS_VISIBILITY_COLUMN_INDEX] || '';
-      const canViewMetrics = String(metricsVisibilityValue).trim().toLowerCase() === 'yes';
-
-      return { 
-        success: true, 
-        displayName: data[i][2],
-        metricsVisible: canViewMetrics,
-        profilePictureUrl: data[i][7] || '' // Fetching profile picture from column 8
-      };
-    }
-  }
-  return { success: false, displayName: null, metricsVisible: false };
-}
-
-// Returns the menu structure (from "Master Sheet" and "Permission" sheets) for the given user
-/**
- * Returns the menu structure (from "Master Sheet", "Permission", and "Create Button") for the given user.
- * Also attaches any permitted buttons for each sub-menu.
- */
-/**
- * Returns the menu structure (from "Master Sheet", "Permission", and "Create Button")
- * for the given userName. Looks up the user's role from the "User" sheet:
- *   - If role = 'admin', attach ALL buttons for each sub-menu.
- *   - Otherwise, filter by Permission sheet as before.
- */
-function getMenuStructure(userName) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const masterSheet = ss.getSheetByName("Master Sheet");
-  const permissionSheet = ss.getSheetByName("Permission");
-  const createButtonSheet = ss.getSheetByName("Create Button");
-
-  // Read the user's role (used later for table data; for menu, we now always filter by Permission)
-  const role = getUserRoleByEmail(userName) || 'user';
-
-  // 1) Read the Master Sheet (columns: mainMenu, subMenu, sheetName, dbLink, externalId, rangeSpec, Question, Table)
-  const masterData = masterSheet.getRange(2, 1, masterSheet.getLastRow() - 1, 8).getValues();
-  const menuStructure = {};
-  masterData.forEach(row => {
-    const mainMenu = String(row[0]).trim();
-    const subMenu = String(row[1]).trim();
-    const sheetName = String(row[2]).trim();
-    const dbLink = String(row[3]).trim();
-    const externalId = String(row[4]).trim();
-    const rangeSpec = row[5] ? String(row[5]).trim() : "";
-    
-    // Combine Question and Table into (Q)(T) for frontend compatibility if needed, 
-    // or just pass them as requested. For now, let's pass a combined string for backward compatibility.
-    const q = row[6] ? String(row[6]).trim() : "";
-    const t = row[7] ? String(row[7]).trim() : "";
-    const entryViewable = (q ? "(" + q + ")" : "") + (t ? "(" + t + ")" : "");
-    
-    if (!menuStructure[mainMenu]) {
-      menuStructure[mainMenu] = [];
-    }
-    menuStructure[mainMenu].push({
-      subMenu: subMenu,
-      sheetName: sheetName,
-      dbLink: dbLink,
-      externalId: externalId,
-      rangeSpec: rangeSpec,
-      entryViewable: entryViewable,
-      buttons: []
-    });
-  });
-
-  // 2) Read the "Create Button" sheet into a button map.
-    const lastRowBtn = createButtonSheet.getLastRow();
-    let buttonData = [];
-    if (lastRowBtn >= 2) { 
-      buttonData = createButtonSheet.getRange(2, 1, lastRowBtn - 1, 4).getValues();
-    }
-  const buttonMap = {};
-  buttonData.forEach(row => {
-    const bMenu = String(row[0]).trim();
-    const bSub = String(row[1]).trim();
-    const bName = String(row[2]).trim();
-    const bUrl = String(row[3]).trim();
-    if (bMenu && bSub && bName && bUrl) {
-      const key = bMenu + "||" + bSub + "||" + bName;
-      buttonMap[key] = bUrl;
-    }
-  });
-
-  // 3) Read the Permission sheet and build a permission map.
-  const lastRowPerm = permissionSheet.getLastRow();
-  let permData = [];
-  if (lastRowPerm >= 2) {
-    permData = permissionSheet.getRange(2, 1, lastRowPerm - 1, 5).getValues();
-  }
-  const userPermissions = [];
-  const accessTypeMap = {}; 
-  
-  permData.forEach(row => {
-    let [permUser, permMenu, permSubMenu, permButtonNames, accessType] = row;
-    if (!permUser || !permMenu || !permSubMenu) return;
-    
-    if (String(permUser).toLowerCase() === String(userName).toLowerCase()) {
-      if (permButtonNames && typeof permButtonNames === 'string' && permButtonNames.indexOf(',') >= 0) {
-        const splitBtns = permButtonNames.split(',').map(s => s.trim()).filter(s => s !== "");
-        splitBtns.forEach(bName => {
-          userPermissions.push({
-            menu: String(permMenu).trim(),
-            subMenu: String(permSubMenu).trim(),
-            buttonName: bName
-          });
-        });
-      } else {
-        userPermissions.push({
-          menu: String(permMenu).trim(),
-          subMenu: String(permSubMenu).trim(),
-          buttonName: permButtonNames ? String(permButtonNames).trim() : ""
-        });
-      }
-      
-      if (!accessTypeMap[permMenu]) {
-        accessTypeMap[permMenu] = {};
-      }
-      accessTypeMap[permMenu][permSubMenu] = String(accessType || "").trim();
-    }
-  });
-
-  // Group permissions by main menu and sub-menu.
-  // Always register a permission record, even if the button name is empty.
-  const userPermMap = {};
-  userPermissions.forEach(({ menu, subMenu, buttonName }) => {
-    if (!userPermMap[menu]) {
-      userPermMap[menu] = {};
-    }
-    if (!userPermMap[menu][subMenu]) {
-      userPermMap[menu][subMenu] = [];
-    }
-    userPermMap[menu][subMenu].push(buttonName);
-  });
-
-  // Only include sub-menus for which there is a permission record.
-  // 4) Filter the master menu based on permissions (SKIP if no userName provided):
-  Object.keys(menuStructure).forEach(mainMenu => {
-    // If userName is provided, filter sub-menus for this main menu based on the Permission sheet:
-    if (userName && userName.trim() !== "") {
-      menuStructure[mainMenu] = menuStructure[mainMenu].filter(item => {
-        const subName = item.subMenu;
-        // Only include the sub-menu if there's a permission record for it
-        if (!userPermMap[mainMenu] || !userPermMap[mainMenu][subName]) {
-          return false;
+    <style>
+        :root {
+            --primary-color: #1A7499;
+            --primary-dark: #0D5E7A;
+            --bg-muted: #f5f7fb;
+            --text-color: #1f2937;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --info-color: #17a2b8;
+            --card-shadow: 0 6px 18px rgba(16, 24, 40, 0.08);
+            --radius: 12px;
         }
-        // For permitted sub-menus, attach only the allowed buttons:
-        const permBtnNames = userPermMap[mainMenu][subName];
-        const buttonObjects = [];
-        permBtnNames.forEach(bName => {
-          const key = mainMenu + "||" + subName + "||" + bName;
-          if (buttonMap[key]) {
-            buttonObjects.push({
-              name: bName,
-              url: buttonMap[key]
+
+        /* Global Styles */
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+            padding-top: 60px;
+            /* offset for fixed navbar */
+            padding-bottom: 50px;
+            /* Add this line to make space for the footer */
+            color: var(--text-color);
+            background: var(--bg-muted);
+        }
+
+        /* Navbar */
+        .navbar {
+            position: fixed !important;
+            /* Make sure it stays at the top */
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            /* Fixed height aligned with sidebar top */
+            display: flex;
+            align-items: center;
+            /* Center items vertically inside navbar */
+            justify-content: space-between;
+            padding: 0 16px;
+            background-color: var(--primary-color);
+            color: white;
+            box-shadow: var(--card-shadow);
+            z-index: 1000;
+        }
+
+        .navbar h2 {
+            font-size: 24px;
+            margin: 0;
+        }
+
+        #burger {
+            color: white !important;
+            font-size: 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 10px;
+            margin-right: 20px;
+            transition: background-color 0.3s;
+        }
+
+        .navbar button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+        }
+
+        .navbar button:focus {
+            outline: none;
+        }
+
+        .navbar i {
+            margin-right: 10px;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background-color: var(--primary-color);
+            width: 250px;
+            /* Remove: height: 100%; */
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            top: 60px;
+            bottom: 50px;
+            /* <-- NEW so the sidebar leaves room above the footer */
+            left: -250px;
+            transform: translateX(-100%);
+            transition: left 0.3s ease;
+            overflow-y: auto;
+            color: white;
+            z-index: 800;
+        }
+
+        .sidebar.show {
+            left: 0;
+            transform: translateX(0);
+        }
+
+        .sidebar h2 {
+            color: #fff;
+            font-size: 22px;
+            margin-bottom: 10px;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.3s ease 0.1s;
+        }
+
+        .sidebar.show h2 {
+            opacity: 1;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar ul li {
+            padding: 5px;
+            text-align: left;
+            margin-bottom: 0;
+            /* Overridden from 15px */
+            opacity: 0;
+            transition: opacity 0.3s ease 0.4s;
+        }
+
+        .sidebar.show ul li {
+            opacity: 1;
+        }
+
+        .sidebar ul li a {
+            color: #fff;
+            text-decoration: none;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            border-radius: 5px;
+            transition: background-color 0.3s ease, padding-left 0.3s ease;
+        }
+
+        .sidebar ul li a i {
+            margin-right: 2px;
+        }
+
+        .sidebar ul li a:hover {
+            background-color: #6699CC;
+            padding-left: 20px;
+        }
+
+        .sidebar ul li button {
+            background: none;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        /* Welcome Message & User Picture */
+        .welcome-message {
+            color: #ffeb3b;
+            font-size: 18px;
+            text-align: center;
+            margin-bottom: 10px;
+            transition: opacity 0.3s ease 0.2s;
+        }
+
+        .user-picture {
+            display: block;
+            margin: 0 auto 10px;
+            /* Bottom margin overridden to 10px */
+            border-radius: 50%;
+            width: 100px;
+            /* Overridden from 80px */
+            height: 100px;
+            /* Overridden from 80px */
+            opacity: 0;
+            transition: opacity 0.3s ease 0.3s;
+        }
+
+        .sidebar.show .user-picture {
+            opacity: 1;
+        }
+
+        /* Content Area */
+        .content {
+            flex: 1;
+            padding: 20px;
+            background-color: #f4f4f9;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content h2 {
+            margin-bottom: 20px;
+            font-size: 28px;
+            color: #333;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            max-width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            flex: 1;
+            overflow-y: auto;
+            table-layout: auto;
+        }
+
+        table th,
+        table td {
+            padding: 8px 12px;
+            text-align: left;
+            border: 1px solid #dee2e6;
+            white-space: nowrap;
+        }
+
+        table th {
+            background-color: var(--primary-color);
+            color: #fff;
+            cursor: pointer;
+        }
+
+        table tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        thead th {
+            position: sticky;
+            top: 0;
+            background-color: var(--primary-color);
+            color: #fff;
+            z-index: 1;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        tbody tr:nth-child(odd) {
+            background-color: #DFDFDF;
+            font-weight: 400;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #fff;
+            font-weight: 400;
+        }
+
+        /* Specific sheet table styles */
+        #sheetTable {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #sheetTable th,
+        #sheetTable td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        .login-container h2 {
+            margin-bottom: 10px;
+            font-size: 1.5em;
+            color: #333;
+        }
+
+        .login-container p {
+            font-size: 0.9em;
+            color: #777;
+            margin-bottom: 20px;
+        }
+
+        .login-container input[type="text"],
+        .login-container input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            box-sizing: border-box;
+        }
+
+        .input-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .input-container i {
+            position: absolute;
+            right: 10px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .login-container .btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #000;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 20px 0;
+        }
+
+        .login-container .btn:hover {
+            background-color: #333;
+        }
+
+        .social-login {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .social-login img {
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+        }
+
+        .forgot-password {
+            font-size: 0.9em;
+            color: #0073e6;
+            text-decoration: none;
+            margin: 10px 0;
+            display: inline-block;
+        }
+
+        /* Logout Button */
+        #logoutButton {
+            margin-top: auto;
+            background-color: #f44336;
+        }
+
+        #logoutButton:hover {
+            background-color: #d32f2f;
+        }
+
+        /* Link Content & Iframe */
+        .link-content {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-top: 20px;
+            overflow: hidden;
+            background-color: #fff;
+            display: none;
+        }
+
+        .link-content iframe {
+            width: 100%;
+            height: 500px;
+            border: none;
+        }
+
+        /* Main Container */
+        .main-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: margin-left 0.3s ease;
+        }
+
+        .main-container.with-sidebar {
+            margin-left: 250px;
+            width: calc(100% - 250px);
+        }
+
+        /* Sheet Content */
+        .sheet-content {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        /* Filter & Dropdown */
+        .filter-container {
+            display: flex;
+            justify-content: center;
+            padding: 5px;
+            border: 1px solid var(--primary-color);
+            border-radius: 8px;
+        }
+
+        /* Inspiration-like filter section */
+        .filter-section {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: var(--radius);
+            box-shadow: var(--card-shadow);
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .filter-section .form-label {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .filter-section .btn {
+            border-radius: 8px;
+        }
+
+        .search-input {
+            width: 50%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
+        }
+
+        .filter-input,
+        .filter-select {
+            width: 90%;
+            padding: 5px;
+            margin-top: 5px;
+            box-sizing: border-box;
+        }
+
+        .filter-select {
+            appearance: auto;
+        }
+
+        .dropdown-wrapper {
+            position: relative;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .search-input-wrapper {
+            display: flex;
+            flex-direction: column;
+            margin-top: 5px;
+        }
+
+        .search-input-wrapper input {
+            border: 1px solid #ccc;
+            padding: 5px;
+            border-radius: 5px;
+        }
+
+        .filter-select-wrapper {
+            background-color: #fff;
+            border: 1px solid black;
+            border-radius: 5px;
+            padding: 5px;
+        }
+
+        /* Submenu */
+        .submenu {
+            display: none;
+            padding-left: 20px;
+            margin-top: 5px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+        }
+
+        .submenu li {
+            margin-bottom: 5px;
+        }
+
+        .submenu li a {
+            padding: 8px 15px;
+            color: #fff;
+        }
+
+        .submenu li a:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .submenu-link {
+            display: inline-block;
+            padding: 5px;
+            margin-right: 10px;
+        }
+
+        .sidebar-btn {
+            display: block;
+            margin-top: 5px;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            text-align: center;
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        /* Loader */
+        .loader {
+            --dim: 3rem;
+            width: var(--dim);
+            height: var(--dim);
+            position: relative;
+            animation: spin988 2s linear infinite;
+        }
+
+        .loader .circle {
+            --color: #333;
+            --dim: 1.2rem;
+            width: var(--dim);
+            height: var(--dim);
+            background-color: var(--color);
+            border-radius: 50%;
+            position: absolute;
+        }
+
+        .loader .circle:nth-child(1) {
+            top: 0;
+            left: 0;
+        }
+
+        .loader .circle:nth-child(2) {
+            top: 0;
+            right: 0;
+        }
+
+        .loader .circle:nth-child(3) {
+            bottom: 0;
+            left: 0;
+        }
+
+        .loader .circle:nth-child(4) {
+            bottom: 0;
+            right: 0;
+        }
+
+        @keyframes spin988 {
+            0% {
+                transform: scale(1) rotate(0);
+            }
+
+            20%,
+            25% {
+                transform: scale(1.3) rotate(90deg);
+            }
+
+            45%,
+            50% {
+                transform: scale(1) rotate(180deg);
+            }
+
+            70%,
+            75% {
+                transform: scale(1.3) rotate(270deg);
+            }
+
+            95%,
+            100% {
+                transform: scale(1) rotate(360deg);
+            }
+        }
+
+        /* Utility Classes */
+        .flex {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .flex-row {
+            flex-direction: row;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        .item-center {
+            align-items: center;
+        }
+
+        .gap-3 {
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: #172645;
+        }
+
+        .btn-reset {
+            background-color: #1F305E;
+            color: white;
+            border-color: #1F305E;
+            margin-bottom: 15px;
+        }
+
+        .btn-reset:hover {
+            background-color: #14223C;
+        }
+
+        .font-bold {
+            font-weight: bold;
+        }
+
+        .text-xl {
+            font-size: 1.25rem;
+        }
+
+        .form-control {
+            padding: 8px 12px;
+            font-size: 14px;
+            border-radius: 4px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: #1F305E;
+            box-shadow: 0 0 4px rgba(31, 48, 94, 0.4);
+        }
+
+        .w-\[300px\] {
+            width: 300px;
+        }
+
+        input[type="date"] {
+            padding: 6px 10px;
+            border: 1px solid #1F305E;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        input[type="date"]:focus {
+            border-color: #1F305E;
+            box-shadow: 0 0 4px rgba(31, 48, 94, 0.4);
+        }
+
+        label {
+            font-size: 14px;
+            font-weight: bold;
+            color: #1F305E;
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 10px;
+            }
+
+            table,
+            th,
+            td {
+                font-size: 14px;
+            }
+
+            iframe {
+                height: 300px;
+            }
+
+            .flex {
+                flex-direction: column;
+            }
+
+            .w-\[300px\] {
+                width: 100%;
+            }
+
+            .gap-3 {
+                gap: 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+
+            table,
+            th,
+            td {
+                font-size: 12px;
+                padding: 8px;
+            }
+
+            iframe {
+                height: 250px;
+            }
+        }
+
+        /* Footer */
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 0.8rem;
+            background-color: #e9ecef;
+            border-top: 0.7px solid black;
+            padding: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .footer .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0;
+            width: 100%;
+            height: 50px;
+        }
+
+        .footer .text-center {
+            flex: 1;
+        }
+
+        .footer .footer-links {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .footer-links a {
+            color: #6c757d;
+            text-decoration: none;
+        }
+
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+
+        .footer-icon {
+            width: 20px;
+            height: 20px;
+            vertical-align: middle;
+            margin: 0 2px;
+        }
+
+        /* BG Image & Heading (Landing Page) */
+        .bgimg {
+            background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.5, 0.5), rgba(0, 0, 0, 0.7)),
+                url(https://images.pexels.com/photos/3184306/pexels-photo-3184306.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1);
+            background-repeat: no-repeat;
+            background-size: cover;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .heading {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 3px;
+            height: 400px;
+            width: 1141px;
+        }
+
+        .heading img {
+            border-radius: 100%;
+            height: 150px;
+            width: 150px;
+        }
+
+        .heading h1 {
+            background-color: transparent;
+            color: white;
+            font-size: 50px;
+        }
+
+        .heading h2 {
+            background-color: transparent;
+            color: white;
+            font-size: 25px;
+        }
+
+        footer section {
+            width: 400px;
+        }
+
+        footer section p {
+            font-size: 10px;
+        }
+
+        footer ul {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .footlink {
+            text-decoration: none;
+            color: white;
+        }
+
+        footer ul p {
+            font-size: 14px;
+        }
+
+        .info {
+            display: flex;
+            flex-direction: row;
+            justify-content: start;
+            align-items: start;
+            gap: 30px;
+        }
+
+        .logolink {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .logolink img {
+            height: 25px;
+            width: 25px;
+        }
+
+        .one,
+        .two,
+        .three {
+            height: 110px;
+            width: 1px;
+            background-color: rgb(163, 152, 152);
+        }
+
+        .line1,
+        .line2,
+        .line3 {
+            height: 1px;
+            width: 1300px;
+            background-color: rgb(206, 204, 204);
+            margin: 10px;
+        }
+
+        .cont {
+            height: 220px;
+            width: 1000px;
+            margin: 20px 212px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            justify-content: space-around;
+        }
+
+        .conthead {
+            height: 70px;
+            text-align: center;
+        }
+
+        .contpara {
+            height: 70px;
+            text-align: left;
+            color: #374151;
+        }
+
+        .contnode {
+            height: 70px;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        .video {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+        }
+
+        /* Login Page Update Card View /*
+  /* --- Make the .login-container a centered “card” with two halves --- */
+        .login-container {
+            /* Force it above any other layout rules that might be interfering */
+            position: fixed !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+
+            /* Size and visuals */
+            width: min(980px, 92vw) !important;
+            height: auto !important;
+            background-color: #fff !important;
+            border-radius: var(--radius) !important;
+            box-shadow: var(--card-shadow) !important;
+            z-index: 9999 !important;
+            /* So it appears on top of nav, etc. */
+
+            /* Layout: two side-by-side halves */
+            display: flex !important;
+            flex-direction: row !important;
+            overflow: hidden !important;
+            margin: 0 !important;
+            /* Kill any old margin that was centering differently */
+        }
+
+        /* A class to hide the login card by overriding 'display: flex !important' */
+        .login-container.hidden {
+            display: none !important;
+        }
+
+        /* Left half: center your existing form within it */
+        .login-left {
+            width: 42% !important;
+            padding: 36px !important;
+            box-sizing: border-box !important;
+
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            align-items: flex-start !important;
+            /* or 'center' if you want the form horizontally centered */
+            gap: 10px !important;
+        }
+
+        /* Right half: an image that fills the space */
+        .login-right {
+            width: 58% !important;
+            overflow: hidden !important;
+            background: linear-gradient(135deg, rgba(26, 116, 153, 0.15), rgba(13, 94, 122, 0.15));
+        }
+
+        /* Make the image fill the right half nicely */
+        .login-right img {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+            display: block !important;
+        }
+
+        .login-title {
+            font-weight: 800;
+            color: #0f172a;
+            margin: 0;
+        }
+
+        .login-subtitle {
+            color: #64748b;
+            margin: 0 0 8px 0;
+            font-size: 14px;
+        }
+
+        .input-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .input-container input {
+            width: 100%;
+            padding: 12px 40px 12px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            outline: none;
+            transition: box-shadow .2s ease, border-color .2s ease;
+            background: #fff;
+        }
+
+        .input-container input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(26, 116, 153, 0.10);
+        }
+
+        .input-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            cursor: pointer;
+        }
+
+        .login-left select {
+            width: 100% !important;
+            padding: 12px !important;
+            border: 1px solid #e5e7eb !important;
+            border-radius: 10px !important;
+            box-shadow: none !important;
+        }
+
+        .login-actions {
+            width: 100%;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .login-actions .btn {
+            width: auto;
+            background: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            color: #fff;
+            border-radius: 10px;
+            padding: 10px 16px;
+            font-weight: 700;
+        }
+
+        .login-actions .btn:hover {
+            background: var(--primary-dark);
+            border-color: var(--primary-dark);
+        }
+
+        .forgot-password {
+            font-size: 12px;
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .forgot-password:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .login-container {
+                width: 94vw !important;
+            }
+
+            .login-left,
+            .login-right {
+                width: 100% !important;
+            }
+
+            .login-container {
+                flex-direction: column !important;
+            }
+
+            .login-right {
+                max-height: 200px;
+            }
+        }
+
+        /* Force consistent width & style for text, password, and select fields in the login form */
+        .login-left input[type="text"],
+        .login-left input[type="password"],
+        .login-left select {
+            width: 100% !important;
+            /* Same width for all */
+            padding: 10px !important;
+            /* Consistent padding */
+            margin: 10px 0 !important;
+            /* Even vertical spacing */
+            border: 1px solid #ccc !important;
+            border-radius: 8px !important;
+            box-sizing: border-box !important;
+            font-size: 1em !important;
+        }
+
+        #businessTitle {
+            position: relative;
+            /* Remove it from the normal flow */
+            margin: 0;
+            margin-left: 20px;
+            font-size: 20px;
+            /* Adjust font size if needed */
+            vertical-align: middle;
+        }
+
+        /* Global Loader Overlay */
+        #globalLoader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        /* The dark backdrop behind the enlarged card */
+        /* Overlay styles with fade-in/out animation */
+        .enlarged-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .enlarged-overlay.show {
+            opacity: 1;
+        }
+
+        /* Container styles with slide-in and fade-in animation */
+        .enlarged-container {
+            position: relative;
+            background: #fff;
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            width: 80vw;
+            height: 80vh;
+            overflow: visible;
+            transform: translateY(-20px);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        .enlarged-container.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .enlarged-container .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 28px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            z-index: 10001;
+        }
+
+        /* Center Google Charts within their card‐bodies */
+        .card-body>div[id$="_div"] {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+        }
+
+        /* Center Google Charts within their card‐bodies */
+        .card-body>div[id$="_div2"] {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .nav-tabs .nav-link {
+            color: var(--primary-color);
+            font-weight: bold;
+            border: 1px solid transparent;
+        }
+
+        .nav-tabs .nav-link.active {
+            background-color: var(--primary-color) !important;
+            color: white !important;
+            border-color: var(--primary-color) !important;
+        }
+
+        .nav-tabs .nav-link:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .tab-content {
+            margin-top: 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Stat cards inspired by inspiration_index */
+        .stat-card {
+            background: #fff;
+            border-radius: var(--radius);
+            box-shadow: var(--card-shadow);
+            border-left: 6px solid var(--primary-color);
+        }
+
+        .stat-card .stat-card-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .stat-card .stat-card-info h5 {
+            margin: 0;
+            color: #334155;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .stat-card .stat-card-info p {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .stat-card .stat-card-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+
+        .stat-card.primary {
+            border-left-color: var(--primary-color);
+        }
+
+        .stat-card.success {
+            border-left-color: var(--success-color);
+        }
+
+        .stat-card.warning {
+            border-left-color: var(--warning-color);
+        }
+
+        .stat-card.danger {
+            border-left-color: var(--danger-color);
+        }
+
+        .stat-card.primary .stat-card-icon {
+            background: linear-gradient(135deg, var(--primary-color), #005f7f);
+        }
+
+        .stat-card.success .stat-card-icon {
+            background: linear-gradient(135deg, var(--success-color), #1e7e34);
+        }
+
+        .stat-card.warning .stat-card-icon {
+            background: linear-gradient(135deg, var(--warning-color), #e0a800);
+            color: #1f2937;
+        }
+
+        .stat-card.danger .stat-card-icon {
+            background: linear-gradient(135deg, var(--danger-color), #c82333);
+        }
+
+        /* Card wrappers for charts */
+        .card.shadow-sm {
+            box-shadow: var(--card-shadow) !important;
+            border: none;
+            border-radius: var(--radius);
+        }
+
+        .card .card-body {
+            padding: 16px;
+        }
+
+        /* Table improvements */
+        .table.table-striped.table-bordered thead th {
+            background: var(--primary-color) !important;
+            color: #fff !important;
+        }
+
+        .table-responsive {
+            box-shadow: var(--card-shadow);
+            border-radius: var(--radius);
+        }
+
+        /* Profile Dropdown Styles from main.html */
+        .user-profile-container {
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 5px 10px;
+            border-radius: 50px;
+            transition: background-color 0.2s;
+            color: black !important;
+        }
+
+        .user-profile-container:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #ffffff;
+            background-color: #f0f0f0;
+        }
+
+        .user-initials {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #1A7499;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            border: 2px solid white;
+        }
+
+        .user-initials.large {
+            width: 80px;
+            height: 80px;
+            font-size: 36px;
+            margin: 0 auto;
+        }
+
+        .user-avatar-wrapper {
+            position: relative;
+            width: 40px;
+            height: 40px;
+        }
+
+        .profile-dropdown {
+            position: absolute;
+            top: 110%;
+            right: 0;
+            width: 260px;
+            padding: 20px;
+            background: #e9eef6;
+            color: #3c4043;
+            border-radius: 20px;
+            text-align: center;
+            border: 1px solid #d1d9e0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: none;
+            flex-direction: column;
+            z-index: 1000;
+            animation: slideDown 0.2s ease-out;
+        }
+
+        .profile-dropdown.show {
+            display: flex;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .dropdown-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            cursor: pointer;
+            color: #5f6368;
+            font-size: 16px;
+            padding: 4px;
+        }
+
+        .dropdown-email {
+            font-size: 13px;
+            color: #5f6368;
+            margin-bottom: 15px;
+            font-weight: 500;
+            word-break: break-all;
+        }
+
+        .dropdown-avatar-container {
+            margin: 0 auto 12px;
+            position: relative;
+            width: 70px;
+            height: 70px;
+        }
+
+        .dropdown-avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid #ddd;
+        }
+
+        .dropdown-greeting {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .dropdown-footer {
+            display: flex;
+            background: #ffffff;
+            border-top: 1px solid #d1d9e0;
+            margin-top: 15px;
+            margin-left: -20px;
+            margin-right: -20px;
+            margin-bottom: -20px;
+            border-bottom-left-radius: 20px;
+            border-bottom-right-radius: 20px;
+        }
+
+        .footer-btn {
+            flex: 1;
+            padding: 12px 4px;
+            border: none;
+            background: transparent;
+            color: #000000;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+            border-right: 1px solid #d1d9e0;
+        }
+
+        .footer-btn:last-child {
+            border-right: none;
+        }
+
+        .footer-btn:hover {
+            background-color: #f8f9fa;
+        }
+
+        .footer-btn:first-child:hover {
+            border-bottom-left-radius: 20px;
+        }
+
+        .footer-btn:last-child:hover {
+            border-bottom-right-radius: 20px;
+            color: #d93025;
+        }
+
+        .footer-btn span {
+            color: inherit;
+            white-space: nowrap;
+            font-size: 10px;
+        }
+
+        .footer-btn i {
+            font-size: 13px;
+            color: inherit;
+        }
+    </style>
+
+
+
+</head>
+
+<body onload="onLoad()">
+    <!-- Global Loader Overlay -->
+    <div id="globalLoader" style="display: flex;">
+        <div class="loader">
+            <div class="circle"></div>
+            <div class="circle"></div>
+            <div class="circle"></div>
+            <div class="circle"></div>
+        </div>
+    </div>
+    <!-- Navigation Bar (inspiration-style) -->
+    <header class="navbar">
+        <div class="d-flex align-items-center h-100 flex-nowrap">
+            <button id="burger" onclick="toggleSidebar()" style="display: none;">
+                <i class="fas fa-bars"></i>
+            </button>
+            <img id="companyLogo" alt="Company Logo" style="height:36px; margin-right:10px;">
+            <h2 id="businessTitle" class="mb-0" style="padding:10px 0; font-weight: 800; white-space: nowrap;"></h2>
+        </div>
+        <div class="d-flex align-items-center h-100 flex-nowrap">
+            <div id="profileTrigger" class="user-profile-container" style="display: none;"
+                onclick="toggleProfileDropdown(event)">
+                <div class="text-right d-none d-md-block">
+                    <span id="navDisplayName" style="font-weight: 600; font-size: 14px; color: White;">User</span>
+                </div>
+                <div class="user-avatar-wrapper">
+                    <img id="navUserAvatar" src="" class="user-avatar" alt=" " onerror="handleAvatarError()"
+                        style="display: none;">
+                    <div id="navUserInitials" class="user-initials" style="display: none;"></div>
+                </div>
+
+                <div id="userDropdownMenu" class="profile-dropdown">
+                    <div class="dropdown-close" onclick="toggleProfileDropdown(event)">
+                        <i class="fas fa-times"></i>
+                    </div>
+
+                    <!-- Sequence: Email > Image > Name > Buttons -->
+                    <div id="dropdownUserEmail" class="dropdown-email">user@example.com</div>
+
+                    <div class="dropdown-avatar-container">
+                        <img id="dropdownAvatar" src="" class="dropdown-avatar" alt=" "
+                            onerror="handleDropdownAvatarError()" style="display: none;">
+                        <div id="dropdownInitials" class="user-initials large" style="display: none;"></div>
+                    </div>
+
+                    <div id="dropdownDisplayName" class="dropdown-greeting">Hi, User!</div>
+
+                    <div class="dropdown-footer">
+                        <button class="footer-btn" onclick="alert('Update Profile logic later')">
+                            <i class="fas fa-user-gear"></i> <span>Update profile</span>
+                        </button>
+                        <button class="footer-btn" onclick="handleLogout()">
+                            <i class="fas fa-right-from-bracket"></i> <span>Sign out</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Bootstrap Alert for Login/Logout Messages -->
+        <div id="responseMessage" class="alert"
+            style="display: none; position: absolute; left: 50%; transform: translateX(-50%); top: 70px;" role="alert">
+        </div>
+        <h1 id="pageName" class="welcome-message d-none" style="color: white; text-align: center;"></h1>
+    </header>
+    <!-- Overlay for auto-logout warning -->
+    <div id="logoutOverlay"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 9999;">
+    </div>
+    <!-- Auto-logout warning alert -->
+    <div id="logoutWarningAlert" class="alert"
+        style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10000; width: 90%; max-width: 450px; text-align: center; box-shadow: 0 8px 20px rgba(0,0,0,0.3); background-color: white; color: black; border: 2px solid #e0e0e0; border-radius: 12px; padding: 30px;"
+        role="alert">
+        <strong style="font-size: 18px; display: block; margin-bottom: 8px;">Inactivity Warning</strong>
+        <p style="margin-bottom: 12px;">You will be logged out in <span id="logoutCountdown"
+                style="font-weight: bold; font-size: 18px; color: #e74c3c;">10</span> seconds due to inactivity.</p>
+        <button id="stayLoggedInBtn" class="btn mt-2"
+            style="background-color: #1A7499; color: white; font-weight: bold; border: 2px solid #1A7499; padding: 10px 25px; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; font-size: 14px;">Stay
+            Logged In</button>
+    </div>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <!-- Spacer with the same height as the navbar -->
+        <div style="height: 0;"></div>
+        <!--
+                <img id="dynamicImage" alt="Dynamic Image" class="user-picture" src="https://static.vecteezy.com/system/resources/previews/021/548/095/original/default-profile-picture-avatar-user-avatar-icon-person-icon-head-icon-profile-picture-icons-default-anonymous-user-male-and-female-businessman-photo-placeholder-social-network-avatar-portrait-free-vector.jpg"/>
+                -->
+        <!-- User Picture -->
+        <li type="button" style="margin-left: 40px;" onclick="loadHomePage()">Home</li>
+        <ul></ul>
+    </div>
+
+    <!-- Main Container -->
+    <main class="main-container" id="mainContainer" style="display: none;">
+        <!-- Iframe for external links -->
+        <div id="linkContent"
+            style="display: none; width: 100%; height: calc(100vh - 110px); overflow: hidden; margin-top: 110px;">
+            <iframe id="linkFrame" style="width: 100%; height: 100%; border: none;"></iframe>
+        </div>
+        <!-- Sheet content (like table data) -->
+        <div class="sheet-content h-full" id="sheetContent"></div>
+    </main>
+    <!-- Existing login-container remains the same class -->
+    <div class="login-container">
+        <!-- Left half: your current login form -->
+        <div class="login-left">
+            <h2 class="login-title">Sign in</h2>
+            <p class="login-subtitle">Use your email to continue</p>
+            <div class="input-container">
+                <input type="text" id="username" placeholder="Email">
+                <i class="fas fa-envelope input-icon"></i>
+            </div>
+            <div class="input-container">
+                <input type="password" id="password" placeholder="Password">
+                <i class="fas fa-eye input-icon" id="togglePassword" onclick="togglePasswordVisibility()"></i>
+            </div>
+            <select id="role" class="form-control mb-2">
+                <option value="" selected>Select Role</option>
+                <option value="admin">Admin</option>
+                <option value="user">User</option>
+            </select>
+            <div class="login-actions">
+                <a onclick="" class="forgot-password">Forgot password?</a>
+                <button class="btn" onclick="handleLogin()">Login</button>
+            </div>
+        </div>
+        <!-- Login Picture -->
+        <div class="login-right">
+            <img alt="Login Image"
+                src="https://i.ibb.co/wFwv088Y/online-registration-or-sign-up-login-for-account-on-smartphone-app-user-interface-with-secure-passwo.jpg" />
+        </div>
+    </div>
+    <footer class="footer py-2 text-black" style="border-top: 0.7px solid black; height: 50px; z-index: 10500;">
+        <div class="container d-flex justify-content-between align-items-center">
+            <div class="text-left d-flex align-items-center" style="padding:auto;">
+                <img src="https://drive.google.com/thumbnail?id=1rZ7v-EkFpmgVh0tond3ql4cMzDSivEEv&sz=200"
+                    alt="Company Logo" style="width:30px; height:30px; border-radius:50%; margin-right:10px;">
+                <a href="https://www.businessautomations.in/" target="_blank"
+                    style="text-decoration: none; color: black; font-size: 15px; font-weight: 500;">Powered By @
+                    Business Automations Solutions LLP</a>
+            </div>
+            <div class="footer-links d-flex align-items-center supportcontact" style="text-decoration: none;">
+                <a href="https://your-contact-link.com" target="_blank" class="mx-2"
+                    style="color: black;"><u>Contact</u></a>
+                <a href="https://your-support-link.com" target="_blank" class="mx-2"
+                    style="color: black;"><u>Support</u></a>
+                <a href="tel:+918621893237" class="mx-2"><img
+                        src="https://img.icons8.com/?size=100&id=53439&format=png&color=000000" alt="Call"
+                        class="footer-icon"></a>
+                <a href="mailto:koushik.businessautomations@gmail.com" target="_blank" class="mx-2"><img
+                        src="https://img.icons8.com/?size=100&id=85500&format=png&color=000000" alt="Email"
+                        class="footer-icon"></a>
+                <a href="https://www.youtube.com/@businessautomations" target="_blank" class="mx-2"><img
+                        src="https://img.icons8.com/?size=100&id=19318&format=png&color=000000" alt="YouTube"
+                        class="footer-icon"></a>
+                <a href="https://www.linkedin.com/in/business-automations-solutions-llp-a80050203/" target="_blank"
+                    class="mx-2"><img src="https://img.icons8.com/?size=100&id=xuvGCOXi8Wyg&format=png&color=000000"
+                        alt="LinkedIn" class="footer-icon"></a>
+                <!-- Facebook Link -->
+                <a href="https://www.facebook.com/your-facebook-profile" target="_blank" class="mx-2"> <img
+                        src="https://img.icons8.com/?size=100&id=118497&format=png&color=000000" alt="Facebook"
+                        class="footer-icon"></a>
+                <!-- Instagram Link -->
+                <a href="https://www.instagram.com/your-instagram-profile" target="_blank" class="mx-2"><img
+                        src="https://img.icons8.com/?size=100&id=32292&format=png&color=000000" alt="Instagram"
+                        class="footer-icon"></a>
+            </div>
+        </div>
+    </footer>
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+        integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script>
+        // Variables for inactivity tracking
+        let inactivityTimeout;
+        let logoutWarningTimeout;
+        let countdownInterval;
+        const INACTIVITY_TIMEOUT_DURATION = 50 * 60 * 1000; // 10 minutes in milliseconds
+        const WARNING_BEFORE_LOGOUT = 60 * 1000; // 10 seconds warning before logout
+
+        // MIS Score 
+        var currentMisData = [];
+
+        // Function to reset the inactivity timer
+        function resetInactivityTimer() {
+            // Clear any existing timeouts and intervals
+            clearAllTimers();
+
+            // Only set a new timeout if the user is logged in
+            if (localStorage.getItem('userName')) {
+                // Set timeout to show warning before actual logout
+                inactivityTimeout = setTimeout(showLogoutWarning,
+                    INACTIVITY_TIMEOUT_DURATION - WARNING_BEFORE_LOGOUT);
+            }
+        }
+
+        // Function to clear all timers and hide warning
+        function clearAllTimers() {
+            if (inactivityTimeout) {
+                clearTimeout(inactivityTimeout);
+            }
+            if (logoutWarningTimeout) {
+                clearTimeout(logoutWarningTimeout);
+            }
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+
+            // Hide the warning alert and overlay if they're visible
+            document.getElementById('logoutWarningAlert').style.display = 'none';
+            document.getElementById('logoutOverlay').style.display = 'none';
+        }
+
+        // Function to show warning before logout
+        function showLogoutWarning() {
+            // Only proceed if user is still logged in
+            if (localStorage.getItem('userName')) {
+                const warningAlert = document.getElementById('logoutWarningAlert');
+                const countdownElement = document.getElementById('logoutCountdown');
+                let secondsLeft = 10;
+
+                // Show the warning alert
+                document.getElementById('logoutOverlay').style.display = 'block';
+                warningAlert.style.display = 'block';
+                countdownElement.textContent = secondsLeft;
+
+                // Start countdown
+                countdownInterval = setInterval(() => {
+                    secondsLeft--;
+                    countdownElement.textContent = secondsLeft;
+
+                    if (secondsLeft <= 0) {
+                        clearInterval(countdownInterval);
+                    }
+                }, 1000);
+
+                // Set timeout for actual logout
+                logoutWarningTimeout = setTimeout(autoLogout, WARNING_BEFORE_LOGOUT);
+            }
+        }
+
+        // Function to automatically logout after inactivity
+        function autoLogout() {
+            // Clear all timers
+            clearAllTimers();
+
+            // Only proceed if user is logged in
+            if (localStorage.getItem('userName')) {
+                console.log('Auto logout triggered due to inactivity');
+
+                // Show a brief message
+                const responseMessage = document.getElementById('responseMessage');
+                responseMessage.innerText = 'You have been logged out due to inactivity';
+                responseMessage.className = 'alert alert-warning';
+                responseMessage.style.display = 'block';
+
+                // Call the existing logout handler
+                handleLogout();
+
+                // Hide the message after a few seconds
+                setTimeout(() => {
+                    responseMessage.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // Setup event listeners to track user activity
+        function setupInactivityTracking() {
+            // List of events to track
+            const events = [
+                'mousedown', 'mousemove', 'keypress',
+                'scroll', 'touchstart', 'click', 'keydown'
+            ];
+
+            // Add listeners for each event type
+            events.forEach(eventType => {
+                document.addEventListener(eventType, resetInactivityTimer, true);
             });
-          }
-        });
-        item.buttons = buttonObjects;
-        
-        // Add the access type from our separate map
-        item.accessType = accessTypeMap[mainMenu] && accessTypeMap[mainMenu][subName]
-          ? accessTypeMap[mainMenu][subName] 
-          : "";
-          
-        return true;
-      });
-    } else {
-      // IF NEW USER: Attach ALL buttons from the buttonMap for each sub-menu
-      menuStructure[mainMenu].forEach(item => {
-        const subName = item.subMenu;
-        const buttonObjects = [];
-        // Loop through all buttons in buttonMap to find those belonging to this menu/submenu
-        for (const key in buttonMap) {
-          if (key.indexOf(mainMenu + "||" + subName + "||") === 0) {
-            const bName = key.split("||")[2];
-            buttonObjects.push({
-              name: bName,
-              url: buttonMap[key]
+
+            // Add click handler for the "Stay Logged In" button
+            document.getElementById('stayLoggedInBtn').addEventListener('click', function () {
+                resetInactivityTimer();
+
+                // Show a brief confirmation message
+                const responseMessage = document.getElementById('responseMessage');
+                responseMessage.innerText = 'Your session has been extended';
+                responseMessage.className = 'alert alert-success';
+                responseMessage.style.display = 'block';
+
+                // Hide the message after a few seconds
+                setTimeout(() => {
+                    responseMessage.style.display = 'none';
+                }, 3000);
             });
-          }
+
+            // Initial setup of the timer
+            resetInactivityTimer();
         }
-        item.buttons = buttonObjects;
-        item.accessType = ""; // New user has no access types set yet
-      });
-    }
-    
-    // If there are no permitted sub-menus for this main menu, remove it:
-    if (menuStructure[mainMenu].length === 0) {
-      delete menuStructure[mainMenu];
-    }
-  });
 
-  return menuStructure;
-}
-
-// Formats a date to "yyyy-MM-dd" or returns the value if not a date
-function formatDate(date) {
-  if (date instanceof Date) {
-    return Utilities.formatDate(date, Session.getScriptTimeZone(), "yyyy-MM-dd");
-  }
-  return date;
-}
-
-// Retrieves data from a specified sheet
-function getSheetData(sheetName) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
-  if (!sheet) {
-    return { error: `Sheet "${sheetName}" does not exist.` };
-  }
-  const data = sheet.getDataRange().getValues();
-  return { success: true, data: data };
-}
-
-// Retrieves the image URL from the "Setup" sheet (cell B2)
-function getImageUrl() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Setup");
-  return sheet.getRange('B2').getValue();
-}
-
-// Retrieves the business title from the "Setup" sheet (cell B1)
-function getBusinessTitle() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Setup");
-  return sheet.getRange('B1').getValue();
-}
-
-// Retrieves and formats the data from the "Dashboard" sheet
-function getSheetData2() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Dashboard");
-  const data = sheet.getDataRange().getValues();
-  return data.map(row => row.map(cell => (cell instanceof Date ? Utilities.formatDate(cell, Session.getScriptTimeZone(), 'MM/dd/yyyy') : cell)));
-}
-
-function include(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename)
-      .getContent();
-}
-
-// Retrieves the login card image URL from the "SetUP" sheet (cell B3)
-function getLoginImageUrl() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName("SetUP");
-  if (!sheet) {
-    return "Sheet 'SetUP' not found";
-  }
-  var value = sheet.getRange("B3").getValue();
-  return value;
-}
-
-// Retrieves the company logo from the "SetUP" sheet (cell B4) using Drive thumbnail logic
-function getCompanyLogo() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("SetUP");
-  const fileUrl = sheet.getRange("B2").getValue();
-  if (fileUrl) {
-    const fileId = extractFileId(fileUrl);
-    if (fileId) {
-      return getThumbnailImageUrl(fileId);
-    }
-  }
-  return ""; // Return empty string if no logo is available
-}
-
-function extractFileId(fileUrl) {
-  const regex = /\/d\/([a-zA-Z0-9_-]+)/;
-  const matches = fileUrl.match(regex);
-  if (matches && matches[1]) {
-    return matches[1];
-  }
-  return null;
-}
-
-function getThumbnailImageUrl(fileId) {
-  return `https://drive.google.com/thumbnail?id=${fileId}&sz=200`;
-}
-
-/**
- * Given a user email, returns the user's role by looking it up
- * in the "User" sheet. Returns null if the user is not found.
- */
-function getUserRoleByEmail(email) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var userSheet = ss.getSheetByName("User");
-  if (!userSheet) {
-    // No 'User' sheet found
-    return null;
-  }
-
-  // Read all rows in the 'User' sheet
-  var data = userSheet.getDataRange().getValues();
-  // data[0] is the header row: ["User ID", "Password", "Display Name", "Role", "Manager", "Profile Picture", ...]
-  // We'll loop from row 1 downward
-  for (var i = 1; i < data.length; i++) {
-    var row = data[i];
-    var userID = row[0];  // "User ID" (the email, presumably)
-    var role   = row[3];  // "Role" is in the 4th column (index 3)
-
-    // Compare case-insensitively if the userID matches the login email
-    if (String(userID).toLowerCase() === String(email).toLowerCase()) {
-      return role; // Return the role
-    }
-  }
-
-  // If not found, return null (or "user" if you want a default)
-  return null;
-}
-
-
-/**
- * getParamHtml(sheetName, pageTitleArg, externalId, rangeSpec, userName, role, buttons)
- *
- * If role = 'admin', show all data and all buttons.
- * If role != 'admin', filter rows by user’s email and show only the buttons that were passed in.
- */
-/**
- * SERVER-SIDE: Return the ParamIndex.html for a given sheet, injecting
- * the final array of data. If a column is "DateRange," keep typed date
- * objects; otherwise store the sheet's displayed text.
- * 
- * Also skip creating filters for "DriveImage" in ParamIndex (see Part B below).
- */
-function getParamHtml(sheetName, pageTitleArg, externalId, rangeSpec, userName, role, buttons, accessType) {
-  // 1) Decide which spreadsheet to open
-  let ss;
-  if (externalId && externalId.trim() !== "") {
-    ss = SpreadsheetApp.openById(externalId.trim());
-  } else {
-    ss = SpreadsheetApp.getActiveSpreadsheet();
-  }
-
-  // 2) Get the sheet
-  var sheet = ss.getSheetByName(sheetName);
-  if (!sheet) {
-    return "ERROR: Sheet '" + sheetName + "' not found.";
-  }
-
-  // 3) Decide which range to read
-  let range;
-  if (rangeSpec && rangeSpec.trim() !== "") {
-    try {
-      range = sheet.getRange(rangeSpec.trim());
-    } catch (e) {
-      return "ERROR: Invalid range '" + rangeSpec + "' for sheet '" + sheetName + "'. " + e;
-    }
-  } else {
-    // fallback: entire sheet
-    range = sheet.getDataRange();
-  }
-
-  // Read typed values and displayed text
-  let typedValues    = range.getValues();
-  let displayValues  = range.getDisplayValues();
-
-  // We require at least 3 rows for columnIDs, filterTypes, headers
-  if (typedValues.length < 3) {
-    return "ERROR: Not enough rows in '" + sheetName + "'.";
-  }
-
-  // Pull row0 = columnIdentifiers, row1 = filterTypes, row2 = headers
-  var columnIdentifiers = typedValues[0];
-  var filterTypes       = typedValues[1];
-  var headers           = typedValues[2];
-
-  // NEW: Identify logic columns (columns with headers starting with "Logic")
-  var logicColumnIndices = [];
-  var dataColumnIndices = [];
-  var logicData = {};
-
-  for (var i = 0; i < headers.length; i++) {
-    if (String(headers[i]).toLowerCase().startsWith('logic')) {
-      logicColumnIndices.push(i);
-    } else {
-      dataColumnIndices.push(i);
-    }
-  }
-
-  // NEW: Extract logic data from rows 3 onwards
-  for (var r = 3; r < typedValues.length; r++) {
-    var rowIsEmpty = typedValues[r].every(function(cell) {
-      return String(cell).trim() === "";
-    });
-    if (rowIsEmpty) continue;
-
-    logicData[r] = {};
-    for (var l = 0; l < logicColumnIndices.length; l++) {
-      var logicColIndex = logicColumnIndices[l];
-      var logicName = headers[logicColIndex];
-      var colorValue = displayValues[r][logicColIndex];
-      if (colorValue && colorValue.trim() !== "") {
-        logicData[r][logicName] = colorValue.trim();
-      }
-    }
-  }
-
-  // Build a data array from row3 onward, excluding logic columns
-  let data = [];
-  for (var r = 3; r < typedValues.length; r++) {
-    // skip any row that is completely blank
-    var rowIsEmpty = typedValues[r].every(function(cell) {
-      return String(cell).trim() === "";
-    });
-    if (rowIsEmpty) continue;
-
-    var typedRow   = typedValues[r];
-    var dispRow    = displayValues[r];
-    var finalRow   = [];
-
-    // Only include data columns, not logic columns
-    for (var c = 0; c < dataColumnIndices.length; c++) {
-      var colIndex = dataColumnIndices[c];
-      if (filterTypes[colIndex] === 'DateRange') {
-        // Keep the typed value so it can remain a Date object if the cell was a real date
-        finalRow.push(typedRow[colIndex]);
-      } else {
-        // Keep the raw displayed text for everything else
-        finalRow.push(dispRow[colIndex]);
-      }
-    }
-    
-    // Add original row index as the last element of the array
-    finalRow.push(r);
-    data.push(finalRow);
-  }
-
-  // Filter column-related arrays to only include data columns
-  var dataColumnIdentifiers = dataColumnIndices.map(i => columnIdentifiers[i]);
-  var dataFilterTypes = dataColumnIndices.map(i => filterTypes[i]);
-  var dataHeaders = dataColumnIndices.map(i => headers[i]);
-
-  // 4) If role not provided, find it from the User sheet
-  if (!role) {
-    role = getUserRoleByEmail(userName) || 'user';
-  }
-
-  // 5) Filter out data if user is not admin AND accessType is not "Full"
-  if (role.toLowerCase() !== 'admin' && accessType !== 'Full') {
-    // For example, if col0 is the user's email
-    data = data.filter(function(row) {
-      return String(row[0]).toLowerCase() === String(userName).toLowerCase();
-    });
-  }
-  // If role is admin OR accessType is "Full", we keep all data
-
-  // 6) Build the ParamIndex template
-  var template = HtmlService.createTemplateFromFile('ParamIndex');
-  template.columnIdentifiers = dataColumnIdentifiers;
-  template.filterTypes       = dataFilterTypes;
-  template.headers           = dataHeaders;
-  template.filteredData      = data;
-  template.pageTitle         = pageTitleArg;
-  template.timeZone          = ss.getSpreadsheetTimeZone();
-
-  template.entryViewable     = getEntryViewable(sheetName, externalId);
-
-  // 7) Attach buttons
-  template.buttons = buttons || [];
-
-  // 8) Add context parameters to the template 
-  template.sheetName = sheetName;
-  template.externalId = externalId; 
-  template.rangeSpec = rangeSpec;
-  template.userName = userName;
-  template.role = role;
-  template.accessType = accessType;
-
-  // NEW: Add logic data to template
-  template.logicData = logicData;
-  template.logicColumnNames = logicColumnIndices.map(i => headers[i]);
-
-  // 9) Return the rendered HTML
-  return template.evaluate().getContent();
-}
-
-// In Code.gs, ensure the refreshParamData() function is fully refreshing the data:
-// In Code.gs, replace the entire refreshParamData function with this:
-function refreshParamData(params) {
-  // Return the complete HTML with fresh data
-  // This will ensure that all columns, including new ones, are included
-  
-  // If accessType was not provided, look it up from Master Sheet
-  let accessType = params.accessType || "";
-  if (!accessType) {
-    // Get accessType from the Master Sheet (similar to how getMenuStructure does it)
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const permissionSheet = ss.getSheetByName("Permission");
-    const lastRowPerm = permissionSheet.getLastRow();
-    let permData = [];
-    if (lastRowPerm >= 2) {
-      permData = permissionSheet.getRange(2, 1, lastRowPerm - 1, 5).getValues();
-    }
-    
-    // Find matching permission for this user and submenu
-    for (let i = 0; i < permData.length; i++) {
-      let [permUser, permMenu, permSubMenu, permButtonNames, permAccessType] = permData[i];
-      if (String(permUser).toLowerCase() === String(params.userName).toLowerCase() &&
-          String(permSubMenu).trim() === String(params.pageTitle).trim()) {
-        accessType = String(permAccessType || "").trim();
-        break;
-      }
-    }
-  }
-  
-  // Get the buttons for this submenu
-  let buttons = [];
-  try {
-    // Step 1: Get menu structure to retrieve the buttons
-    const menuStructure = getMenuStructure(params.userName);
-    
-    // Step 2: Find buttons for this specific submenu
-    for (const mainMenu in menuStructure) {
-      for (const item of menuStructure[mainMenu]) {
-        if (item.sheetName === params.sheetName && 
-            item.subMenu === params.pageTitle && 
-            item.externalId === params.externalId) {
-          buttons = item.buttons || [];
-          break;
+        // Global username variable
+        let userName = '';
+        // Retrieve username from localStorage and store it in sessionStorage
+        userName = localStorage.getItem('userName');
+        if (userName) {
+            sessionStorage.setItem('loggedInUsers', userName);
         }
-      }
-    }
-  } catch (e) {
-    // If there's an error, we'll just use an empty array for buttons
-    // but we'll log the error for debugging
-    Logger.log("Error retrieving buttons: " + e.toString());
-  }
-  
-  return getParamHtml(
-    params.sheetName, 
-    params.pageTitle, 
-    params.externalId, 
-    params.rangeSpec, 
-    params.userName, 
-    params.role, 
-    buttons, // Pass the retrieved buttons here instead of empty array
-    accessType // Use looked-up or provided accessType
-  );
-}
 
-/**
- * Gets the "Entry Viewable" setting for a sheet from the Master Sheet.
- * The format should be: (A,B,D),(C,E) where:
- * - First parenthesis group (A,B,D) contains columns to display in label-data format
- * - Second parenthesis group (C,E) contains columns to display in tabular format
- * - Column references can be single letters (A,B,C...) or multi-letter (AA,AB,AC...)
- * - If empty, no view card will be available
- * - If only one group is provided like (A,B,C), only label-data format will be used
- */
-function getEntryViewable(sheetNameToFind, externalIdToFind) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const masterSheet = ss.getSheetByName("Master Sheet");
-  const data = masterSheet.getDataRange().getValues();
-  
-  // Skip header row
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    // Match both sheet name and external ID (or empty external ID)
-    if (row[2] === sheetNameToFind && (row[4] === externalIdToFind || (!row[4] && !externalIdToFind))) {
-      // Columns G (6) and H (7)
-      const q = row[6] ? String(row[6]).trim() : "";
-      const t = row[7] ? String(row[7]).trim() : "";
-      return (q ? "(" + q + ")" : "") + (t ? "(" + t + ")" : "");
-    }
-  }
-  return ""; 
-}
+        function openLinkInNewTab() {
+            var url = 'https://lookerstudio.google.com/embed/reporting/88139f2d-d2ee-4068-b428-63642819be1f/page/p_d8nwb62ded'
+            window.open(url, '_blank');
+        }
 
-// MIS Score Backend Functions - Add these to Code.gs
+        const loggedInUser = sessionStorage.getItem('loggedInUsers');
 
-/**
- * Get the external sheet ID from SetUp sheet
- */
-function getExternalSheetId() {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const setupSheet = ss.getSheetByName("SetUP");
-    if (!setupSheet) return null;
-    
-    return setupSheet.getRange("B3").getValue();
-  } catch (error) {
-    console.error("Error getting external sheet ID:", error);
-    return null;
-  }
-}
+        function loadInitialLoginElements() {
+            // Wrap each asynchronous call in a promise
+            const dynamicImagePromise = new Promise((resolve) => {
+                google.script.run.withSuccessHandler((url) => {
+                    // Check if url is empty, null or only whitespace. If so, use the default dummy image.
+                    const imgUrl = url && url.trim() !== ""
+                        ? url
+                        : "https://static.vecteezy.com/system/resources/previews/021/548/095/original/default-profile-picture-avatar-user-avatar-icon-person-icon-head-icon-profile-picture-icons-default-anonymous-user-male-and-female-businessman-photo-placeholder-social-network-avatar-portrait-free-vector.jpg";
 
-/**
- * Get MIS data from external sheet
- */
-function getMISData(userName, role) {
-  try {
-    const externalSheetId = getExternalSheetId();
-    if (!externalSheetId) {
-      return { error: "External sheet ID not found in SetUP sheet cell B3" };
-    }
-    
-    const externalSS = SpreadsheetApp.openById(externalSheetId);
-    const dataSheet = externalSS.getSheetByName("data");
-    
-    if (!dataSheet) {
-      return { error: "Data sheet not found in external spreadsheet" };
-    }
-    
-    const data = dataSheet.getDataRange().getValues();
-    if (data.length <= 1) {
-      return { success: true, data: [] };
-    }
-    
-    // Filter data based on user role
-    let filteredData = data.slice(1); // Remove header
-    
-    if (role !== 'admin') {
-      filteredData = filteredData.filter(row => 
-        String(row[0]).toLowerCase() === String(userName).toLowerCase()
-      );
-    }
-    
-    return { success: true, data: filteredData, headers: data[0] };
-  } catch (error) {
-    console.error("Error getting MIS data:", error);
-    return { error: "Failed to retrieve MIS data: " + error.toString() };
-  }
-}
+                    imageUrl = "https://static.vecteezy.com/system/resources/previews/021/548/095/original/default-profile-picture-avatar-user-avatar-icon-person-icon-head-icon-profile-picture-icons-default-anonymous-user-male-and-female-businessman-photo-placeholder-social-network-avatar-portrait-free-vector.jpg"
+                    // document.getElementById('dynamicImage').src = imageUrl;
+                    resolve();
+                }).getImageUrl();
+            });
 
-/**
- * Get week mapping data
- */
-function getWeekMappingData() {
-  try {
-    const externalSheetId = getExternalSheetId();
-    if (!externalSheetId) return [];
-    
-    const externalSS = SpreadsheetApp.openById(externalSheetId);
-    const weekMapSheet = externalSS.getSheetByName("WeekMap");
-    
-    if (!weekMapSheet) {
-      return []; // Return empty array if WeekMap doesn't exist
-    }
-    
-    const data = weekMapSheet.getDataRange().getValues();
-    return data.length > 1 ? data.slice(1) : []; // Remove header if exists
-  } catch (error) {
-    console.error("Error getting week mapping:", error);
-    return [];
-  }
-}
+            const titlePromise = new Promise((resolve) => {
+                google.script.run.withSuccessHandler((title) => {
+                    document.getElementById('businessTitle').innerText = title;
+                    resolve();
+                }).getBusinessTitle();
+            });
 
-/**
- * Get work commitments data
- */
-function getWorkCommitments() {
-  try {
-    const externalSheetId = getExternalSheetId();
-    if (!externalSheetId) return [];
-    
-    const externalSS = SpreadsheetApp.openById(externalSheetId);
-    const commitmentSheet = externalSS.getSheetByName("workCommitments");
-    
-    if (!commitmentSheet) {
-      return []; // Return empty array if sheet doesn't exist
-    }
-    
-    const data = commitmentSheet.getDataRange().getValues();
-    return data.length > 1 ? data.slice(1) : []; // Remove header if exists
-  } catch (error) {
-    console.error("Error getting work commitments:", error);
-    return [];
-  }
-}
+            const loginImagePromise = new Promise((resolve) => {
+                // Hardcode the image URL directly
+                //document.querySelector('.login-right img').src = "https://drive.google.com/uc?export=view&id=1YUXsgczv0E7B3A_uOBjE0dP3m-h_hSkc";
+                resolve();
+            });
 
-/**
- * Calculate MIS scores for dashboard
- */
-function calculateMISScores(userName, role, startDate, endDate) {
-  try {
-    const misDataResult = getMISData(userName, role);
-    if (misDataResult.error) {
-      return misDataResult;
-    }
-    
-    const misData = misDataResult.data;
-    const workCommitments = getWorkCommitments();
-    
-    // Parse dates - ensure we include the full day
-    const filterStartDate = new Date(startDate);
-    filterStartDate.setHours(0, 0, 0, 0);
-    
-    const filterEndDate = new Date(endDate);
-    filterEndDate.setHours(23, 59, 59, 999);
-    
-    // Filter data by date range (Planned column - index 2)
-    const filteredData = misData.filter(row => {
-      if (!row[2]) return false; // Skip empty planned dates
-      const plannedDate = new Date(row[2]);
-      plannedDate.setHours(0, 0, 0, 0);
-      return plannedDate >= filterStartDate && plannedDate <= filterEndDate;
-    });
-    
-    // Group by user
-    const userGroups = {};
-    filteredData.forEach(row => {
-      const email = row[0];
-      const doerName = row[1];
-      
-      if (!userGroups[email]) {
-        userGroups[email] = {
-          email: email,
-          name: doerName,
-          tasks: []
-        };
-      }
-      userGroups[email].tasks.push(row);
-    });
-    
-    // Calculate scores for each user
-    const results = [];
-    
-    Object.keys(userGroups).forEach(email => {
-      const userGroup = userGroups[email];
-      const tasks = userGroup.tasks;
-      
-      // Calculate metrics
-      const totalTasks = tasks.length;
-      const completedTasks = tasks.filter(task => task[3] && task[3] !== '').length; // Actual column
-      const onTimeTasks = tasks.filter(task => {
-        if (!task[3] || task[3] === '') return false;
-        const actualDate = new Date(task[3]);
-        const plannedDate = new Date(task[2]);
-        return actualDate <= plannedDate;
-      }).length;
-      
-      // Get the week number for the SELECTED week (not current calendar week)
-      const selectedWeekNumber = getWeekNumber(filterStartDate);
-      const previousWeekNumber = selectedWeekNumber - 1;
-      
-      // Get previous week commitments (for "Current Week Score")
-      const previousCommitments = workCommitments.find(commitment => 
-        commitment[0] === email && commitment[1] === previousWeekNumber
-      );
-      
-      const currentWeekWND = previousCommitments ? (previousCommitments[4] || 0) : 0;
-      const currentWeekWNDOT = previousCommitments ? (previousCommitments[5] || 0) : 0;
-      
-      // Calculate scores
-      const wndScore = totalTasks > 0 ? ((completedTasks / totalTasks) * 100) - 100 : -100;
-      const wndotScore = completedTasks > 0 ? ((onTimeTasks / completedTasks) * 100) - 100 : -100;
-      
-      // Get current week commitments (for "Next Commitment" - the week being viewed)
-      const currentCommitments = workCommitments.find(commitment => 
-        commitment[0] === email && commitment[1] === selectedWeekNumber
-      );
-      
-      results.push({
-        userId: email,
-        name: userGroup.name,
-        currentWeekScoreWND: currentWeekWND,
-        totalTasks: totalTasks,
-        totalCompletedTasks: completedTasks,
-        wndScore: Math.round(wndScore * 100) / 100,
-        nextCommitmentWND: currentCommitments ? (currentCommitments[4] || '') : '',
-        currentWeekScoreWNDOT: currentWeekWNDOT,
-        totalCompleteTasks: completedTasks,
-        onTimeDoneTasks: onTimeTasks,
-        wndotScore: Math.round(wndotScore * 100) / 100,
-        nextCommitmentWNDOT: currentCommitments ? (currentCommitments[5] || '') : '',
-        weekNumber: selectedWeekNumber
-      });
-    });
-    
-    return { success: true, data: results };
-  } catch (error) {
-    console.error("Error calculating MIS scores:", error);
-    return { error: "Failed to calculate MIS scores: " + error.toString() };
-  }
-}
+            // Return a promise that resolves when all promises resolve
+            return Promise.all([dynamicImagePromise, titlePromise, loginImagePromise]);
+        }
 
-/**
- * Get week number for a date
- */
-function getWeekNumber(date) {
-  const weekMapData = getWeekMappingData();
-  
-  if (weekMapData.length > 0) {
-    // Use custom week mapping
-    for (let i = 0; i < weekMapData.length; i++) {
-      const startDate = new Date(weekMapData[i][0]);
-      const endDate = new Date(weekMapData[i][1]);
-      if (date >= startDate && date <= endDate) {
-        return weekMapData[i][2];
-      }
-    }
-  }
-  
-  // Default week calculation (starting from Jan 1)
-  const startOfYear = new Date(date.getFullYear(), 0, 1);
-  const diffInTime = date.getTime() - startOfYear.getTime();
-  const diffInDays = Math.ceil(diffInTime / (1000 * 3600 * 24));
-  return Math.ceil(diffInDays / 7);
-}
+        function onLoad() {
+            // Reset any previous iframe state
+            document.getElementById('linkContent').style.display = 'none';
+            document.getElementById('sheetContent').style.display = 'block';
 
-/**
- * Get process details for a specific user and date range
- */
-function getProcessDetails(userEmail, startDate, endDate) {
-  try {
-    const misDataResult = getMISData(userEmail, 'user'); // Always filter to specific user
-    if (misDataResult.error) {
-      return misDataResult;
-    }
-    
-    const misData = misDataResult.data;
-    
-    // Filter by date range - ensure we include the full day
-    const filterStartDate = new Date(startDate);
-    filterStartDate.setHours(0, 0, 0, 0);
-    
-    const filterEndDate = new Date(endDate);
-    filterEndDate.setHours(23, 59, 59, 999);
-    
-    const filteredData = misData.filter(row => {
-      if (!row[2]) return false; // Skip empty planned dates
-      const plannedDate = new Date(row[2]);
-      plannedDate.setHours(0, 0, 0, 0);
-      return plannedDate >= filterStartDate && plannedDate <= filterEndDate;
-    });
-    
-    // Group by process
-    const processGroups = {};
-    filteredData.forEach(row => {
-      const processName = row[5]; // Process Name column
-      
-      if (!processGroups[processName]) {
-        processGroups[processName] = [];
-      }
-      processGroups[processName].push(row);
-    });
-    
-    // Calculate process metrics
-    const results = [];
-    Object.keys(processGroups).forEach(processName => {
-      const tasks = processGroups[processName];
-      const totalTasks = tasks.length;
-      const completedTasks = tasks.filter(task => task[3] && task[3] !== '').length;
-      const onTimeTasks = tasks.filter(task => {
-        if (!task[3] || task[3] === '') return false;
-        const actualDate = new Date(task[3]);
-        const plannedDate = new Date(task[2]);
-        return actualDate <= plannedDate;
-      }).length;
-      
-      const taskScore = totalTasks > 0 ? ((completedTasks / totalTasks) * 100) - 100 : -100;
-      const timeScore = completedTasks > 0 ? ((onTimeTasks / completedTasks) * 100) - 100 : -100;
-      
-      results.push({
-        processName: processName,
-        totalTasks: totalTasks,
-        totalCompleted: completedTasks,
-        taskScore: Math.round(taskScore * 100) / 100,
-        totalCompleteTasks: completedTasks,
-        onTimeDoneTasks: onTimeTasks,
-        timeScore: Math.round(timeScore * 100) / 100
-      });
-    });
-    
-    return { success: true, data: results };
-  } catch (error) {
-    console.error("Error getting process details:", error);
-    return { error: "Failed to get process details: " + error.toString() };
-  }
-}
+            // Existing onLoad logic:
+            userName = localStorage.getItem('userName');
+            const displayName = localStorage.getItem('displayName'); // <-- store name from localStorage
 
-/**
- * Save work commitments
- */
-function saveWorkCommitments(userEmail, weekNumber, startDate, endDate, wndCommitment, wndotCommitment) {
-  try {
-    const externalSheetId = getExternalSheetId();
-    if (!externalSheetId) {
-      return { error: "External sheet ID not found" };
-    }
-    
-    const externalSS = SpreadsheetApp.openById(externalSheetId);
-    let commitmentSheet = externalSS.getSheetByName("workCommitments");
-    
-    // Create sheet if it doesn't exist
-    if (!commitmentSheet) {
-      commitmentSheet = externalSS.insertSheet("workCommitments");
-      commitmentSheet.getRange(1, 1, 1, 6).setValues([
-        ["UserId", "Week Number", "Start Date", "End Date", "Next Commitment (Work not done)", "Next Commitment (Work Done on Time)"]
-      ]);
-    }
-    
-    const data = commitmentSheet.getDataRange().getValues();
-    
-    // Find existing row for this user and week
-    let rowIndex = -1;
-    for (let i = 1; i < data.length; i++) {
-      if (data[i][0] === userEmail && data[i][1] == weekNumber) {
-        rowIndex = i + 1; // Convert to 1-based index
-        break;
-      }
-    }
-    
-    const newRow = [userEmail, parseInt(weekNumber), startDate, endDate, wndCommitment, wndotCommitment];
-    
-    if (rowIndex > 0) {
-      // Update existing row
-      commitmentSheet.getRange(rowIndex, 1, 1, 6).setValues([newRow]);
-    } else {
-      // Add new row
-      commitmentSheet.appendRow(newRow);
-    }
-    
-    return { success: true, message: "Commitments saved successfully" };
-  } catch (error) {
-    console.error("Error saving work commitments:", error);
-    return { error: "Failed to save commitments: " + error.toString() };
-  }
-}
+            // Fetch the business title
+            google.script.run.withSuccessHandler(function (title) {
+                document.getElementById('businessTitle').innerText = title;
+            }).getBusinessTitle();
 
-/**
- * Get all available weeks for dropdown
- */
-function getAvailableWeeks() {
-  try {
-    const weekMapData = getWeekMappingData();
-    
-    if (weekMapData.length > 0) {
-      // Use custom week mapping
-      return weekMapData.map(row => ({
-        weekNumber: row[2],
-        startDate: formatDateForInput(new Date(row[0])),
-        endDate: formatDateForInput(new Date(row[1])),
-        label: `Week ${row[2]} (${formatDateForDisplay(new Date(row[0]))} - ${formatDateForDisplay(new Date(row[1]))})`
-      }));
-    } else {
-      // Generate default weeks for current year
-      const currentYear = new Date().getFullYear();
-      const weeks = [];
-      
-      // Start from the first Monday of the year
-      const jan1 = new Date(currentYear, 0, 1);
-      const jan1DayOfWeek = jan1.getDay();
-      const firstMonday = new Date(currentYear, 0, 1 + (jan1DayOfWeek === 0 ? 1 : 8 - jan1DayOfWeek));
-      
-      for (let week = 1; week <= 52; week++) {
-        const startDate = new Date(firstMonday);
-        startDate.setDate(firstMonday.getDate() + (week - 1) * 7);
-        
-        const endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + 6);
-        
-        weeks.push({
-          weekNumber: week,
-          startDate: formatDateForInput(startDate),
-          endDate: formatDateForInput(endDate),
-          label: `Week ${week} (${formatDateForDisplay(startDate)} - ${formatDateForDisplay(endDate)})`
+            // Fetch the company logo
+            google.script.run.withSuccessHandler(function (logoUrl) {
+                document.getElementById('companyLogo').src = logoUrl;
+            }).getCompanyLogo();
+
+            // If we have a logged-in user, show main container (pass the displayName!)
+            if (userName) {
+                showMainContainer(userName, displayName);
+                google.script.run.withSuccessHandler(buildSidebar).getMenuStructure(userName);
+                loadHomePage();
+            }
+            // Otherwise, show the login screen
+            else {
+                showLoginContainer();
+                loadInitialLoginElements().then(() => {
+                    document.getElementById('globalLoader').style.display = 'none';
+                });
+            }
+
+            // Add this line at the end of the function
+            setupInactivityTracking();
+        }
+
+        function successHandler(imageUrl) {
+            document.getElementById('dynamicImage').src = imageUrl; // Update the img src with the URL
+        }
+
+        function successHandlerTitle(title) {
+            document.getElementById('businessTitle').innerText = title; // Update the h2 text
+        }
+
+        // Show main content when logged in
+        function showMainContainer(userName, displayName) {
+            // Ensure the sidebar is closed by default regardless of its previous state
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.remove('show');
+            document.getElementById('mainContainer').classList.remove('with-sidebar');
+
+            document.querySelector('.login-container').classList.add('hidden'); // Hide login card
+            document.querySelector('.main-container').style.display = 'flex';    // Show dashboard
+
+            // Show profile container
+            document.getElementById('profileTrigger').style.display = 'flex';
+
+            const profilePictureUrl = localStorage.getItem('profilePictureUrl');
+
+            // Update and show the welcome message on the top-right
+            document.getElementById('navDisplayName').innerText = "Hi " + displayName;
+
+            // --- POPULATE DROPDOWN CONTENT ---
+            document.getElementById('dropdownDisplayName').innerText = "Hi, " + displayName + "!";
+            document.getElementById('dropdownUserEmail').innerText = userName;
+
+            // --- NAVBAR AVATAR ---
+            const navAvatarImg = document.getElementById('navUserAvatar');
+            const navInitialsDiv = document.getElementById('navUserInitials');
+
+            // --- DROPDOWN AVATAR ---
+            const dropdownAvatarImg = document.getElementById('dropdownAvatar');
+            const dropdownInitialsDiv = document.getElementById('dropdownInitials');
+
+            // Helper to set either image or initials
+            const setAvatar = (url, imgEl, initialsEl, isLarge = false) => {
+                if (url && url.trim() !== "" && url !== "undefined") {
+                    const directLink = getDriveDirectLink(url);
+                    imgEl.src = directLink;
+                    imgEl.style.display = 'block';
+                    initialsEl.style.display = 'none';
+                } else {
+                    const firstLetter = displayName ? displayName.trim().charAt(0).toUpperCase() : "U";
+                    imgEl.style.display = 'none';
+                    initialsEl.innerText = firstLetter;
+                    initialsEl.style.display = 'flex';
+                }
+            };
+
+            setAvatar(profilePictureUrl, navAvatarImg, navInitialsDiv);
+            setAvatar(profilePictureUrl, dropdownAvatarImg, dropdownInitialsDiv, true);
+
+            // Show the burger (menu) icon
+            document.getElementById('burger').style.display = 'block';
+
+            // Now, force the global loader overlay to be visible (in case it was hidden)
+            var loader = document.getElementById('globalLoader');
+            loader.style.display = 'flex';  // Show overlay on top of dashboard
+        }
+
+        // --- Profile Dropdown Logic ---
+        function toggleProfileDropdown(event) {
+            event.stopPropagation();
+            const dropdown = document.getElementById('userDropdownMenu');
+            dropdown.classList.toggle('show');
+        }
+
+        // Close dropdown when clicking outside
+        window.addEventListener('click', function (e) {
+            const dropdown = document.getElementById('userDropdownMenu');
+            const trigger = document.getElementById('profileTrigger');
+
+            if (dropdown && dropdown.classList.contains('show')) {
+                if (!trigger || !trigger.contains(e.target)) {
+                    dropdown.classList.remove('show');
+                }
+            }
         });
-      }
-      
-      return weeks;
-    }
-  } catch (error) {
-    console.error("Error getting available weeks:", error);
-    // Return at least current week as fallback
-    const today = new Date();
-    const monday = new Date(today);
-    const dayOfWeek = today.getDay();
-    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    monday.setDate(today.getDate() + mondayOffset);
-    
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    
-    return [{
-      weekNumber: 1,
-      startDate: formatDateForInput(monday),
-      endDate: formatDateForInput(sunday),
-      label: `Week 1 (${formatDateForDisplay(monday)} - ${formatDateForDisplay(sunday)})`
-    }];
-  }
-}
 
-/**
- * Helper function to format date for input fields (YYYY-MM-DD)
- */
-function formatDateForInput(date) {
-  // Use local timezone instead of UTC to avoid date shifts
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
+        // Handle image load error specifically for dropdown
+        function handleDropdownAvatarError() {
+            const displayName = localStorage.getItem('displayName') || "U";
+            const imgEl = document.getElementById('dropdownAvatar');
+            const initialsEl = document.getElementById('dropdownInitials');
 
-/**
- * Helper function to format date for display (DD/MM/YYYY)
- */
-function formatDateForDisplay(date) {
-  // Use consistent local date formatting
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
-  return `${day}/${month}/${year}`;
-}
+            imgEl.style.display = 'none';
+            initialsEl.innerText = displayName.charAt(0).toUpperCase();
+            initialsEl.style.display = 'flex';
+        }
 
-/**
- * Get MIS Score page HTML
- */
-function getMISScorePageHtml(userName, role) {
-  const template = HtmlService.createTemplateFromFile('MISScorePage');
-  template.userName = userName;
-  template.role = role;
-  
-  return template.evaluate().getContent();
-}
+        // Handle image load error
+        function handleAvatarError() {
+            const displayName = localStorage.getItem('displayName') || "U";
+            const avatarImg = document.getElementById('navUserAvatar');
+            const initialsDiv = document.getElementById('navUserInitials');
+            const firstLetter = displayName ? displayName.trim().charAt(0).toUpperCase() : "U";
 
-// ============================================
-// USER MANAGEMENT FUNCTIONS
-// ============================================
+            avatarImg.style.display = 'none';
+            initialsDiv.innerText = firstLetter;
+            initialsDiv.style.display = 'flex';
+        }
 
-/**
- * Get all users from the User sheet
- * Returns user data excluding sensitive password info for display
- */
-// ... (previous functions remain unchanged)
+        // Helper to convert Drive sharing link to direct download/view link
+        function getDriveDirectLink(url) {
+            if (!url) return '';
+            const driveIdMatch = url.match(/[-\w]{25,}/);
+            if (driveIdMatch && (url.includes('drive.google.com') || url.includes('docs.google.com'))) {
+                return 'https://drive.google.com/thumbnail?id=' + driveIdMatch[0] + '&sz=w200';
+            }
+            return url;
+        }
 
-/**
- * Get all users from the User sheet
- * Returns user data excluding sensitive password info for display
- */
-function getUsersData() {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const userSheet = ss.getSheetByName("User");
-    
-    if (!userSheet) {
-      return { error: "User sheet not found" };
-    }
-    
-    const data = userSheet.getDataRange().getValues();
-    
-    if (data.length <= 1) {
-      return { success: true, users: [] };
-    }
-    
-    // Skip header row, map to user objects
-    // Columns: User ID, Password, Display Name, Role, Manager, Number, Metrics Visibility, Profile Picture
-    const users = data.slice(1).map(row => ({
-      userId: row[0] || '',
-      password: row[1] || '',
-      displayName: row[2] || '',
-      role: row[3] || '',
-      manager: row[4] || '',
-      mobileNumber: row[5] || '',
-      metricsVisible: row[6] || '',
-      profilePicture: row[7] || ''
-    }));
-    
-    return { success: true, users: users };
-  } catch (error) {
-    Logger.log("Error in getUsersData: " + error);
-    return { error: "Failed to fetch users: " + error.toString() };
-  }
-}
+        // Show login screen if no user is logged in
+        function showLoginContainer() {
+            document.querySelector('.login-container').classList.remove('hidden');
+            document.querySelector('.main-container').style.display = 'none';
+        }
 
-/**
- * Get all menus and their buttons from Master Sheet and Create Button
- * This will be used to build the permission checkboxes
- */
-function getAllMenusAndButtons() {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const masterSheet = ss.getSheetByName("Master Sheet");
-    const createButtonSheet = ss.getSheetByName("Create Button");
-    
-    if (!masterSheet) {
-      return { error: "Master Sheet not found" };
-    }
-    
-    // Read Master Sheet to get all submenus
-    const masterData = masterSheet.getRange(2, 1, masterSheet.getLastRow() - 1, 3).getValues();
-    
-    // Group by mainMenu -> subMenus
-    const menuStructure = {};
-    masterData.forEach(row => {
-      const mainMenu = String(row[0]).trim();
-      const subMenu = String(row[1]).trim();
-      
-      if (!mainMenu || !subMenu) return;
-      
-      if (!menuStructure[mainMenu]) {
-        menuStructure[mainMenu] = new Set();
-      }
-      menuStructure[mainMenu].add(subMenu);
-    });
-    
-    // Convert Sets to Arrays for JSON serialization
-    const menus = {};
-    for (let mainMenu in menuStructure) {
-      menus[mainMenu] = Array.from(menuStructure[mainMenu]);
-    }
-    
-    // Read Create Button sheet to get all buttons per submenu
-    const buttons = {};
-    if (createButtonSheet) {
-      const lastRowBtn = createButtonSheet.getLastRow();
-      if (lastRowBtn >= 2) {
-        const buttonData = createButtonSheet.getRange(2, 1, lastRowBtn - 1, 4).getValues();
-        
-        buttonData.forEach(row => {
-          const bMenu = String(row[0]).trim();
-          const bSub = String(row[1]).trim();
-          const bName = String(row[2]).trim();
-          
-          if (!bMenu || !bSub || !bName) return;
-          
-          const key = bMenu + "||" + bSub;
-          if (!buttons[key]) {
-            buttons[key] = [];
-          }
-          buttons[key].push(bName);
+        // Build the sidebar dynamically with menu items
+        function buildSidebar(filteredMenuStructure) {
+            const sidebar = document.querySelector('.sidebar ul');
+            sidebar.innerHTML = '';
+
+            // 1) Sort main menu names alphabetically
+            const sortedMainMenus = Object.keys(filteredMenuStructure).sort((a, b) => a.localeCompare(b));
+
+            // 2) Loop over each sorted main menu
+            for (let mainMenu of sortedMainMenus) {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <a href="#" onclick="event.preventDefault(); toggleSubMenu(this)">
+                      <i class="fas fa-chevron-down"></i>${mainMenu}
+                    </a>`;
+
+                sidebar.appendChild(li);
+
+                // Create the UL for sub‐menus
+                const subMenuList = document.createElement('ul');
+                subMenuList.className = 'submenu bg-[#5072A7]';
+
+                // 3) Sort sub menus by the subMenu property (item.subMenu) alphabetically
+                const sortedSubMenus = filteredMenuStructure[mainMenu].slice();
+
+                // 4) Build each submenu item in alphabetical order
+                sortedSubMenus.forEach(item => {
+                    const subLi = document.createElement('li');
+                    const subLink = `
+                      <a href="#"
+                        class="submenu-link"
+                        onclick='event.preventDefault();
+                                  loadSheet("${item.sheetName}",
+                                            "${item.externalId}",
+                                            "${item.subMenu}",
+                                            "${item.rangeSpec}",
+                                            "${userName}",
+                                            "${item.dbLink}",
+                                            ${JSON.stringify(item.buttons || [])},
+                                            "${item.accessType || ''}")'>
+                        ${safeString(item.subMenu)}
+                      </a>`;
+
+                    // If there’s a button link (item.btnName/item.btnLink), you can add it here
+                    const buttonHtml = (item.btnName && item.btnLink)
+                        ? `<button class="sidebar-btn" onclick="window.open('${item.btnLink}', '_blank')">
+                          ${item.btnName}
+                        </button>`
+                        : '';
+
+                    subLi.innerHTML = subLink + buttonHtml;
+                    subMenuList.appendChild(subLi);
+                });
+
+                li.appendChild(subMenuList);
+            }
+        }
+
+        // Toggle visibility of submenus when a main menu item is clicked
+        function toggleSubMenu(element) {
+            const submenu = element.nextElementSibling;
+            submenu.style.display = submenu.style.display === 'block' ? 'none' : 'block';
+        }
+
+        /**
+         * Extended loadSheet to also receive an array of buttons for this sub-menu
+         */
+        function loadSheet(sheetName, externalId, subMenuName, rangeSpec, userName, dbLink, buttons, accessType) {
+            // Collapse sidebar on selection
+            const sidebar = document.getElementById('sidebar');
+            const mainContainer = document.getElementById('mainContainer');
+            if (sidebar.classList.contains('show')) {
+                sidebar.classList.remove('show');
+                mainContainer.classList.remove('with-sidebar');
+            }
+
+            const linkContent = document.getElementById('linkContent');
+            const sheetContent = document.getElementById('sheetContent');
+            const globalLoader = document.getElementById('globalLoader');
+
+            // Show loader at the start
+            if (globalLoader) globalLoader.style.display = 'flex';
+
+            // Store the access type for future refreshes
+            localStorage.setItem('currentSheetAccessType', accessType || "");
+
+            // Check if this is the MIS Score page
+            if (sheetName === 'MISScore' || subMenuName === 'MIS Score') {
+                linkContent.style.display = 'none';
+                sheetContent.style.display = 'block';
+
+                google.script.run
+                    .withSuccessHandler(function (returnedHtml) {
+                        sheetContent.innerHTML = returnedHtml;
+
+                        // Wait a brief moment for DOM to be ready, then initialize
+                        setTimeout(function () {
+                            // Evaluate any <script> tags inside the returned HTML
+                            const scripts = sheetContent.querySelectorAll("script");
+                            scripts.forEach(scr => {
+                                try {
+                                    eval(scr.innerHTML);
+                                } catch (error) {
+                                    console.error('Error evaluating MIS script:', error);
+                                }
+                            });
+
+                            // Ensure Google Apps Script context is available and trigger initialization
+                            if (typeof window.initializeMISPage === 'function') {
+                                window.initializeMISPage();
+                            }
+
+                            if (globalLoader) globalLoader.style.display = 'none';
+                        }, 100);
+                    })
+                    .withFailureHandler(function (err) {
+                        console.error('Failed to load MIS Score page:', err);
+                        sheetContent.innerHTML = '<div style="padding: 50px; text-align: center;"><h3>Error loading MIS Score page</h3><p>' + err + '</p></div>';
+                        if (globalLoader) globalLoader.style.display = 'none';
+                    })
+                    .getMISScorePageHtml(userName, localStorage.getItem('role'));
+                return;
+
+            }
+
+            if (subMenuName === 'User Management' || sheetName === 'UserManagement') {
+                loadUserManagement(userName, localStorage.getItem('role'));
+                return;
+            }
+
+
+
+            // If dbLink is present, open it in the iframe. Otherwise, show ParamIndex
+            if (dbLink && dbLink.trim() !== '') {
+                linkContent.style.display = 'block';
+                sheetContent.style.display = 'none';
+                try {
+                    new URL(dbLink);
+                    document.getElementById('linkFrame').src = dbLink;
+                } catch (err) {
+                    document.getElementById('linkFrame').srcdoc = "<h3>Invalid link, can't open</h3>";
+                }
+                if (globalLoader) globalLoader.style.display = 'none';
+
+            } else {
+                linkContent.style.display = 'none';
+                sheetContent.style.display = 'block';
+
+                google.script.run
+                    .withSuccessHandler(function (returnedHtml) {
+                        sheetContent.innerHTML = returnedHtml;
+                        // Evaluate any <script> tags inside the returned HTML
+                        const scripts = sheetContent.querySelectorAll("script");
+                        scripts.forEach(scr => eval(scr.innerHTML));
+                        if (globalLoader) globalLoader.style.display = 'none';
+                    })
+                    .withFailureHandler(function (err) {
+                        console.error(err);
+                        if (globalLoader) globalLoader.style.display = 'none';
+                    })
+                    .getParamHtml(sheetName, subMenuName, externalId, rangeSpec, userName, localStorage.getItem('role'), buttons, accessType);
+            }
+        }
+
+        function displaySheetData(response) {
+            const sheetContent = document.getElementById('sheetContent');
+            const loggedInUser = localStorage.getItem('userName');
+            const role = localStorage.getItem('role');
+
+            if (response.error) {
+                sheetContent.innerHTML = `<p>${response.error}</p>`;
+                return;
+            }
+
+            const data = response.data;
+            if (!data || data.length === 0) {
+                sheetContent.innerHTML = "<p>No data available.</p>";
+                return;
+            }
+
+            let htmlContent = `
+                      <div class="container flex flex-row justify-between gap-3 item-center">
+                          <div style="margin-top: 10px">
+                              <button style="background-color: #1F305E; margin-top: 5px;" class="btn text-white btn-reset border border-2 rounded" onclick="resetFilters()">Reset</button>
+                          </div>
+                          <div style="margin-top: 10px; display: none;">
+                              <button style="background-color: #1F305E; margin-top: 5px;" class="btn text-white btn-reset border border-2 rounded" onclick="openLinkInNewTab()">Click</button>
+                          </div>
+                          <div class="d-flex flex-row font-bold text-xl">
+                              <label for="searchBar" style="margin-right: 5px;">Search</label>
+                              <input type="text" id="searchBar" style="border: 1px solid #1F305E;" class="form-control w-[300px]" placeholder="Search..." onkeyup="searchTable()">
+                          </div>
+                          <div>
+                              <label class="" for="startDate">Start Date:</label>
+                              <input type="date" id="startDate" onchange="filterByDateRange()">
+                              <label class="" for="endDate">End Date:</label>
+                              <input type="date" id="endDate" onchange="filterByDateRange()">
+                          </div>
+                      </div>
+                      <div class="table-wrapper">
+                          <table class="table2">
+                              <thead>
+                                  <tr>`;
+
+            const uniqueValues = []; // To track unique dropdown options
+
+            // Generate table headers
+            data[0].forEach((cell, colIndex) => {
+                htmlContent += `
+                          <th>
+                              ${cell}
+                              <button onclick="sortTable(${colIndex}, 'asc')">▲</button>
+                              <button onclick="sortTable(${colIndex}, 'desc')">▼</button>
+                              <br>
+                              <select class="filter-select w-full text-dark" id="filter-${colIndex}" onchange="filterDropdown(${colIndex})">
+                                  <option value="">All</option>
+                              </select>
+                          </th>`;
+                uniqueValues[colIndex] = new Set(); // Initialize unique values for each column
+            });
+
+            htmlContent += `</tr></thead>
+                      <tbody class="table-body" id="tableBody">`;
+
+            // Populate rows
+            for (let i = 1; i < data.length; i++) {
+                const rowUserName = data[i][0];
+                if (role !== 'admin' && rowUserName !== loggedInUser) continue;
+
+                htmlContent += "<tr>";
+                data[i].forEach((cell, colIndex) => {
+                    if (typeof cell === 'string' && cell.startsWith('http')) {
+                        htmlContent += `
+                                  <td>
+                                      <button onclick="window.open('${cell}', '_blank')" style="background: none; border: none; color: blue; cursor: pointer;">
+                                          <i class="fas fa-link"></i>
+                                      </button>
+                                  </td>`;
+                    } else {
+                        htmlContent += `<td>${cell}</td>`;
+                        uniqueValues[colIndex].add(cell);
+                    }
+                });
+                htmlContent += "</tr>";
+            }
+
+            htmlContent += `</tbody></table></div>
+                  <footer class="footer mt-auto py-3 bg-light" style="border-top: 0.7px solid black; height: 50px;">
+                      <div class="container d-flex justify-content-between align-items-center">
+                          <div class="text-left">
+                              <a href="https://www.businessautomations.in/" target="_blank" style="text-decoration: none; color: black; font-size: 15px; font-weight: 500;">Powered By @ Business Automations Solutions LLP</a>
+                          </div>
+                          <div class="footer-links d-flex align-items-center supportcontact">
+                              <a href="https://your-contact-link.com" class="mx-2"><u>Contact</u></a>
+                              <a href="https://your-support-link.com" class="mx-2"><u>Support</u></a>
+                              <a href="tel:+918621893237" class="mx-2"><img src="https://img.icons8.com/?size=100&id=53439&format=png&color=000000" alt="Call" class="footer-icon"></a>
+                              <a href="mailto:koushik.businessautomations@gmail.com" class="mx-2"><img src="https://img.icons8.com/?size=100&id=85500&format=png&color=000000" alt="Email" class="footer-icon"></a>
+                              <a href="https://www.youtube.com/@businessautomations" class="mx-2"><img src="https://img.icons8.com/?size=100&id=19318&format=png&color=000000" alt="YouTube" class="footer-icon"></a>
+                              <a href="https://www.linkedin.com/in/business-automations-solutions-llp-a80050203/" class="mx-2"><img src="https://img.icons8.com/?size=100&id=xuvGCOXi8Wyg&format=png&color=000000" alt="LinkedIn" class="footer-icon"></a>
+                              <!-- Facebook Link -->
+                              <a href="https://www.facebook.com/your-facebook-profile" class="mx-2"> <img src="https://img.icons8.com/?size=100&id=118497&format=png&color=000000" alt="Facebook" class="footer-icon"></a>
+                              <!-- Instagram Link -->
+                              <a href="https://www.instagram.com/your-instagram-profile" class="mx-2"><img src="https://img.icons8.com/?size=100&id=32292&format=png&color=000000" alt="Instagram" class="footer-icon"></a>
+                          </div>
+                      </div>
+                  </footer>`;
+
+            sheetContent.innerHTML = htmlContent;
+
+            populateDropdownFilters(uniqueValues);
+        }
+
+        // Function to populate dropdown filters with unique values
+        function populateDropdownFilters(uniqueValues) {
+            uniqueValues.forEach((values, colIndex) => {
+                const dropdown = document.getElementById(`filter-${colIndex}`);
+
+                // Populate dropdown with unique values
+                const sortedValues = Array.from(values).sort();
+                sortedValues.forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    dropdown.appendChild(option);
+                });
+            });
+        }
+
+        // Function to filter table rows based on selected dropdown options for all columns
+        function filterTable() {
+            const tableBody = document.getElementById('tableBody');
+            const rows = tableBody.getElementsByTagName('tr');
+            const numColumns = rows[0]?.getElementsByTagName('td').length || 0;
+
+            const filters = [];
+            for (let colIndex = 0; colIndex < numColumns; colIndex++) {
+                const dropdown = document.getElementById(`filter-${colIndex}`);
+                filters[colIndex] = dropdown.value;
+            }
+
+            // Show/hide rows based on all active filters
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                let rowMatches = true;
+
+                for (let colIndex = 0; colIndex < numColumns; colIndex++) {
+                    const cellValue = cells[colIndex]?.textContent || "";
+                    if (filters[colIndex] && filters[colIndex] !== cellValue) {
+                        rowMatches = false;
+                        break;
+                    }
+                }
+
+                rows[i].style.display = rowMatches ? "" : "none";
+            }
+
+            // Update dropdown options for visible rows only
+            updateAllDropdowns();
+        }
+
+        // Function to update dropdown options based on visible rows
+        function updateAllDropdowns() {
+            const tableBody = document.getElementById('tableBody');
+            const rows = tableBody.getElementsByTagName('tr');
+            const numColumns = rows[0]?.getElementsByTagName('td').length || 0;
+
+            for (let colIndex = 0; colIndex < numColumns; colIndex++) {
+                const dropdown = document.getElementById(`filter-${colIndex}`);
+                const currentValue = dropdown.value; // Save current selection
+                const uniqueValues = new Set();
+
+                // Collect unique visible values for this column
+                for (let i = 0; i < rows.length; i++) {
+                    if (rows[i].style.display === "none") continue;
+                    const cellValue = rows[i].getElementsByTagName('td')[colIndex]?.textContent || "";
+                    uniqueValues.add(cellValue);
+                }
+
+                // Repopulate dropdown options
+                dropdown.innerHTML = '';
+                const allOption = document.createElement('option');
+                allOption.value = "";
+                allOption.textContent = "All";
+                dropdown.appendChild(allOption);
+
+                const sortedValues = Array.from(uniqueValues).sort();
+                sortedValues.forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    dropdown.appendChild(option);
+                });
+
+                // Restore previously selected value if valid
+                if ([...dropdown.options].some(option => option.value === currentValue)) {
+                    dropdown.value = currentValue;
+                }
+            }
+        }
+
+        // Event listeners for each dropdown filter
+        function filterDropdown(colIndex) {
+            filterTable(); // Call the master filter function to apply all filters together
+        }
+
+        // Function to sort table by column (ascending or descending)
+        function sortTable(colIndex, order) {
+            const table = document.querySelector(".table2");
+            const rows = Array.from(table.querySelectorAll("tbody tr"));
+
+            rows.sort((a, b) => {
+                const aText = a.querySelectorAll("td")[colIndex].textContent;
+                const bText = b.querySelectorAll("td")[colIndex].textContent;
+
+                return order === 'asc' ? aText.localeCompare(bText) : bText.localeCompare(aText);
+            });
+
+            const tbody = table.querySelector("tbody");
+            rows.forEach(row => tbody.appendChild(row)); // Reorder rows in the table body
+        }
+
+        // Function to filter by date range dynamically across all columns
+        function filterByDateRange() {
+            const startDateInput = document.getElementById('startDate').value;
+            const endDateInput = document.getElementById('endDate').value;
+            const tableBody = document.getElementById('tableBody');
+            const rows = tableBody.getElementsByTagName('tr');
+
+            // Parse the input dates and set times explicitly
+            let startDate = startDateInput ? new Date(startDateInput) : null;
+            let endDate = endDateInput ? new Date(endDateInput) : null;
+            if (startDate) startDate.setHours(0, 0, 0, 0);           // Start date at 00:00:00
+            if (endDate) endDate.setHours(23, 59, 59, 999);           // End date at 23:59:59.999
+
+            // Loop through each row in the table
+            for (let i = 0; i < rows.length; i++) {
+                let rowMatchesDateRange = false;
+                const cells = rows[i].getElementsByTagName('td');
+                for (let j = 0; j < cells.length; j++) {
+                    const cellValue = cells[j].textContent.trim();
+                    let rowDate;
+
+                    // If the cell matches the "dd-MM-yyyy" or "MM/dd/yyyy" pattern
+                    if (/^\d{1,2}[/-]\d{1,2}[/-]\d{4}/.test(cellValue)) {
+                        rowDate = parseDashboardDate(cellValue);
+                    } else {
+                        rowDate = new Date(cellValue);
+                    }
+
+                    if (!isNaN(rowDate.getTime())) {
+                        // Check if the row date is within the selected range.
+                        // Entries on the start date (>= startDate) and on the end date (<= endDate) are included.
+                        if ((startDate === null || rowDate >= startDate) &&
+                            (endDate === null || rowDate <= endDate)) {
+                            rowMatchesDateRange = true;
+                            break; // No need to check further cells in this row
+                        }
+                    }
+                }
+                // Show or hide the row based on whether a matching date was found
+                rows[i].style.display = rowMatchesDateRange ? "" : "none";
+            }
+        }
+
+        // Function to reset all filters
+        function resetFilters() {
+            document.querySelectorAll('.filter-select').forEach(select => select.value = ""); // Reset dropdowns
+            document.getElementById('startDate').value = ""; // Reset start date
+            document.getElementById('endDate').value = ""; // Reset end date
+            document.getElementById('searchBar').value = ""; // Reset search bar
+
+            const rows = document.getElementById('tableBody').getElementsByTagName('tr');
+            for (let i = 0; i < rows.length; i++) {
+                rows[i].style.display = ""; // Show all rows
+            }
+
+            $('.filter-select').val(null).trigger('change');
+        }
+
+        // Load homepage content after login
+        function loadHomePage() {
+            // Collapse sidebar on selection
+            const sidebar = document.getElementById('sidebar');
+            const mainContainer = document.getElementById('mainContainer');
+            if (sidebar.classList.contains('show')) {
+                sidebar.classList.remove('show');
+                mainContainer.classList.remove('with-sidebar');
+            }
+
+            // Make sure to hide the iframe container and show the dashboard content
+            document.getElementById('linkContent').style.display = 'none';
+            document.getElementById('sheetContent').style.display = 'block';
+
+            document.getElementById('globalLoader').style.display = 'flex';
+
+            // 1) Insert the dashboard HTML first, so the DOM has the containers:
+            document.getElementById('sheetContent').innerHTML = `
+                    <section class="container mt-3">
+                      <div class="row g-3">
+                          <div class="col-md-3 col-sm-6">
+                              <div class="stat-card primary p-3">
+                                  <div class="stat-card-content">
+                                      <div class="stat-card-info">
+                                          <h5>Total Tasks</h5>
+                                          <p id="total-tasks">Loading...</p>
+                                      </div>
+                                      <div class="stat-card-icon"><i class="fa-solid fa-list"></i></div>
+                                  </div>
+                              </div>
+                          </div>
+                          <div class="col-md-3 col-sm-6">
+                              <div class="stat-card danger p-3">
+                                  <div class="stat-card-content">
+                                      <div class="stat-card-info">
+                                          <h5>Overdue Tasks</h5>
+                                          <p id="overdue-tasks">Loading...</p>
+                                      </div>
+                                      <div class="stat-card-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                                  </div>
+                              </div>
+                          </div>
+                          <div class="col-md-3 col-sm-6">
+                              <div class="stat-card warning p-3">
+                                  <div class="stat-card-content">
+                                      <div class="stat-card-info">
+                                          <h5>Upcoming Tasks</h5>
+                                          <p id="upcoming-tasks">Loading...</p>
+                                      </div>
+                                      <div class="stat-card-icon" style="color:#1f2937;"><i class="fa-solid fa-clock"></i></div>
+                                  </div>
+                              </div>
+                          </div>
+                          <div class="col-md-3 col-sm-6">
+                              <div class="stat-card success p-3">
+                                  <div class="stat-card-content">
+                                      <div class="stat-card-info">
+                                          <h5>Today Task</h5>
+                                          <p id="today-tasks">Loading...</p>
+                                      </div>
+                                      <div class="stat-card-icon"><i class="fa-solid fa-check"></i></div>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  </section>
+
+                  <section class="container py-3">
+                      <button type="button" class="btn btn-secondary mb-3 d-none" style="margin-top: 12px;" id="resetFilters">Reset Filters</button>
+                      <div class="row filter-section" style="margin-top: 8px;">
+                          <div class="col-md-4 mb-3">
+                              <label for="doerFilter" class="form-label">Filter by Doer Name:</label>
+                              <select id="doerFilter" style='border: none; box-shadow: 0 0 4px rgba(31, 48, 94, 0.4);' class="form-select">
+                                  <option value="">All</option>
+                              </select>
+                          </div>
+                          <div class="col-md-4 mb-3">
+                              <label for="processFilter" class="form-label">Filter by Process Name:</label>
+                              <select id="processFilter" style='border: none; box-shadow: 0 0 4px rgba(31, 48, 94, 0.4);' class="form-select">
+                                  <option value="">All</option>
+                              </select>
+                          </div>
+                          <div class="col-md-4 mb-3">
+                              <label for="statusFilter" class="form-label">Filter by Status:</label>
+                              <select id="statusFilter" style='border: none; box-shadow: 0 0 4px rgba(31, 48, 94, 0.4);' class="form-select">
+                                  <option value="">All</option>
+                              </select>
+                          </div>
+                      </div>
+                      <div class="row filter-section">
+                          <div class="col-md-4 mb-3">
+                              <label for="startDate" class="form-label">Start Date:</label>
+                              <input type="date" style='border: none; box-shadow: 0 0 4px rgba(31, 48, 94, 0.4);' id="startDate" class="form-control mb-2">
+                          </div>
+                          <div class="col-md-4 mb-3">
+                              <label for="endDate" class="form-label">End Date:</label>
+                              <input type="date" id="endDate" style='border: none; box-shadow: 0 0 4px rgba(31, 48, 94, 0.4);' class="form-control mb-2">
+                          </div>
+                          <div class="col-md-4 d-flex flex-row gap-3" style="margin-top: 25px; height: 50%;">
+                              <button type="button" id="applyDateRange" class="btn btn-primary">Apply</button>
+                              <button type="button" id="resetDateRange" class="btn btn-secondary">Reset Date Range</button>
+                              <button type="button" id="resetAllFilters" class="btn btn-danger">Reset All Filters</button>
+                          </div>
+                  </section>
+
+                    
+                    ${localStorage.getItem('metricsVisible') === 'true' ? `
+                    <!-- Charts Section -->
+                    <section class="container my-4">
+                      <div class="row g-4 mb-4">
+                        <!-- Column for the first chart card (Bar Chart) -->
+                        <div class="col-lg-6">
+                          <div class="card shadow-sm" onclick="openEnlargedGraph('bar_chart_div', 'barChart', window.myBarChart1Data, window.myBarChart1Options)">
+                            <div class="card-body">
+                              <div id="bar_chart_div"></div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <!-- Column for the second chart card (Pie Chart) -->
+                        <div class="col-lg-6">
+                          <div class="card shadow-sm" onclick="openEnlargedGraph('pie_chart_div', 'pieChart', window.myPieChart1Data, window.myPieChart1Options)">
+                            <div class="card-body">
+                              <div id="pie_chart_div"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+            
+                      <div class="row g-4">
+                        <!-- Third chart card (Bar Chart) -->
+                        <div class="col-lg-6">
+                          <div class="card shadow-sm" onclick="openEnlargedGraph('bar_chart_div2', 'barChart', window.myBarChart2Data, window.myBarChart2Options)">
+                            <div class="card-body">
+                              <div id="bar_chart_div2"></div>
+                            </div>
+                          </div>
+                        </div>
+            
+                        <!-- Fourth chart card (Column Chart; using 'barChart' type) -->
+                        <div class="col-lg-6">
+                          <div class="card shadow-sm" onclick="openEnlargedGraph('pie_chart_div2', 'barChart', window.myBarChart3Data, window.myBarChart3Options)">
+                            <div class="card-body">
+                              <div id="pie_chart_div2"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+                    ` : ''}
+            
+                    <!-- MIS Score Section -->
+                    <section class="container my-4" id="misScoreSection" style="display: none;">
+                      <div class="row mb-3">
+                        <div class="col-12">
+                          <h3 class="text-left mb-3" style="color: #1A7499; font-weight: bold;">Score Management</h3>
+                          
+                          <!-- Tab Navigation -->
+                          <ul class="nav nav-tabs mb-3" id="scoreManagementTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                              <button class="nav-link active" id="mis-tab" data-bs-toggle="tab" data-bs-target="#mis-tab-pane" type="button" role="tab" aria-controls="mis-tab-pane" aria-selected="true" onclick="switchScoreTab('mis')">MIS Score</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                              <button class="nav-link" id="delegation-tab" data-bs-toggle="tab" data-bs-target="#delegation-tab-pane" type="button" role="tab" aria-controls="delegation-tab-pane" aria-selected="false" onclick="switchScoreTab('delegation')">Delegation</button>
+                            </li>
+                          </ul>
+                          
+                          <!-- Common Filters -->
+                          <div class="filter-section" style="padding: 15px;">
+                            <div class="row align-items-end">
+                              <div class="col-md-2">
+                                <label for="scoreStartDate" class="form-label">Start Date:</label>
+                                <input type="date" id="scoreStartDate" class="form-control" style="border: 1px solid #1F305E;">
+                              </div>
+                              <div class="col-md-2">
+                                <label for="scoreEndDate" class="form-label">End Date:</label>
+                                <input type="date" id="scoreEndDate" class="form-control" style="border: 1px solid #1F305E;" readonly>
+                              </div>
+                              <div class="col-md-2">
+                                <label for="scoreWeekNumber" class="form-label">Week Number:</label>
+                                <select id="scoreWeekNumber" class="form-select" style="border: 1px solid #1F305E; max-height: 200px; overflow-y: auto;">
+                                  <option value="">Select Week...</option>
+                                </select>
+                              </div>
+                              <div class="col-md-2" id="scoreUserFilterContainer" style="display: none;">
+                                <label for="scoreUserFilter" class="form-label">Users:</label>
+                                <div class="dropdown">
+                                  <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="scoreUserFilterBtn" data-bs-toggle="dropdown" aria-expanded="false" style="border: 1px solid #1F305E; text-align: left;">
+                                    All Users
+                                  </button>
+                                  <div class="dropdown-menu w-100 p-2" aria-labelledby="scoreUserFilterBtn" id="scoreUserDropdown" style="max-height: 300px; overflow-y: auto;">
+                                    <input type="text" class="form-control mb-2" id="scoreUserSearch" placeholder="Search users...">
+                                    <div id="scoreUserCheckboxes">
+                                      <!-- User checkboxes will be populated here -->
+                                    </div>
+                                    <hr class="my-2">
+                                    <button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="selectAllScoreUsers()">Select All</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAllScoreUsers()">Clear All</button>
+                                  </div>
+                                </div>
+                              </div>
+                              <div class="col-md-4">
+                                <button id="refreshScoreBtn" class="btn btn-primary" style="background-color: #1A7499; border-color: #1A7499;">Refresh</button>
+                                <button id="resetScoreBtn" class="btn btn-secondary ms-2" style="background-color: #6c757d; border-color: #6c757d;">Reset</button>
+                              </div>
+                            </div>
+                          </div>
+            
+                          <!-- Tab Content -->
+                          <div class="tab-content" id="scoreManagementTabContent">
+                            <!-- MIS Score Tab -->
+                            <div class="tab-pane fade show active" id="mis-tab-pane" role="tabpanel" aria-labelledby="mis-tab">
+                              <div class="table-responsive" style="max-height: 70vh; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px;">
+                                <table class="table table-striped table-bordered" id="misTable">
+                                  <thead class="table-light">
+                                    <tr>
+                                      <th rowspan="2" style="position: sticky; top: 0; background: #1A7499; color: white; z-index: 12; vertical-align: middle; border: 1px solid #dee2e6;">User ID</th>
+                                      <th rowspan="2" style="position: sticky; top: 0; background: #1A7499; color: white; z-index: 12; vertical-align: middle; border: 1px solid #dee2e6;">Name</th>
+                                      <th colspan="5" style="position: sticky; top: 0; background: #2c5f8a; color: white; z-index: 12; text-align: center; border: 1px solid #dee2e6;">Work Not Done</th>
+                                      <th colspan="5" style="position: sticky; top: 0; background: #2c5f8a; color: white; z-index: 12; text-align: center; border: 1px solid #dee2e6;">Work Done on Time</th>
+                                      <th rowspan="2" style="position: sticky; top: 0; background: #1A7499; color: white; z-index: 12; vertical-align: middle; border: 1px solid #dee2e6;">Action</th>
+                                    </tr>
+                                    <tr>
+                                      <th style="position: sticky; top: 40px; background: #1A7499; color: white; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">Current Week<br>Score (WND)</th>
+                                      <th style="position: sticky; top: 40px; background: #1A7499; color: white; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">Total Task</th>
+                                      <th style="position: sticky; top: 40px; background: #1A7499; color: white; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">Total Completed<br>Task</th>
+                                      <th style="position: sticky; top: 40px; background: #1A7499; color: white; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">Score</th>
+                                      <th style="position: sticky; top: 40px; background: #1A7499; color: white; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">Next Commitment</th>
+                                      <th style="position: sticky; top: 40px; background: #1A7499; color: white; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">Current Week<br>Score (WND-OT)</th>
+                                      <th style="position: sticky; top: 40px; background: #1A7499; color: white; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">Total Complete<br>Task</th>
+                                      <th style="position: sticky; top: 40px; background: #1A7499; color: white; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">On Time Done<br>Task</th>
+                                      <th style="position: sticky; top: 40px; background: #1A7499; color: white; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">Score</th>
+                                      <th style="position: sticky; top: 40px; background: #1A7499; color: white; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">Next Commitment</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody id="misTableBody">
+                                    <tr>
+                                      <td colspan="12" class="text-center">Please select a date range to view MIS data</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+            
+                            <!-- Delegation Tab -->
+                            <div class="tab-pane fade" id="delegation-tab-pane" role="tabpanel" aria-labelledby="delegation-tab">
+                              <div class="table-responsive" style="max-height: 70vh; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px;">
+                                <table class="table table-striped table-bordered" id="delegationTable">
+                                  <thead class="table-light">
+                                    <tr>
+                                      <th rowspan="2" style="position: sticky; top: 0; background: #1A7499; color: white; z-index: 12; vertical-align: middle; border: 1px solid #dee2e6;">Email</th>
+                                      <th rowspan="2" style="position: sticky; top: 0; background: #1A7499; color: white; z-index: 12; vertical-align: middle; border: 1px solid #dee2e6;">Name</th>
+                                      <th colspan="3" style="position: sticky; top: 0; background: #2c5f8a; color: white; z-index: 12; text-align: center; border: 1px solid #dee2e6;">Current Planned</th>
+                                      <th colspan="3" style="position: sticky; top: 0; background: #2c5f8a; color: white; z-index: 12; text-align: center; border: 1px solid #dee2e6;">Current Score</th>
+                                      <th colspan="4" style="position: sticky; top: 0; background: #2c5f8a; color: white; z-index: 12; text-align: center; border: 1px solid #dee2e6;">Total Task Details</th>
+                                      <th colspan="3" style="position: sticky; top: 0; background: #2c5f8a; color: white; z-index: 12; text-align: center; border: 1px solid #dee2e6;">Next Committed</th>
+                                    </tr>
+                                    <tr>
+                                      <th style="position: sticky; top: 40px; background: #dc3545; color: white; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">Red Score</th>
+                                      <th style="position: sticky; top: 40px; background: #ffc107; color: black; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">Yellow Score</th>
+                                      <th style="position: sticky; top: 40px; background: #28a745; color: white; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">Green Score</th>
+                                      <th style="position: sticky; top: 40px; background: #dc3545; color: white; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">Red Score</th>
+                                      <th style="position: sticky; top: 40px; background: #ffc107; color: black; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">Yellow Score</th>
+                                      <th style="position: sticky; top: 40px; background: #28a745; color: white; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">Green Score</th>
+                                      <th style="position: sticky; top: 40px; background: #1A7499; color: white; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">Total Task</th>
+                                      <th style="position: sticky; top: 40px; background: #1A7499; color: white; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">Completed Task</th>
+                                      <th style="position: sticky; top: 40px; background: #1A7499; color: white; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">Pending Task</th>
+                                      <th style="position: sticky; top: 40px; background: #1A7499; color: white; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">Shifted Task</th>
+                                      <th style="position: sticky; top: 40px; background: #dc3545; color: white; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">Red Score</th>
+                                      <th style="position: sticky; top: 40px; background: #ffc107; color: black; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">Yellow Score</th>
+                                      <th style="position: sticky; top: 40px; background: #28a745; color: white; z-index: 11; border: 1px solid #dee2e6; font-size: 12px; vertical-align: middle; text-align: center;">Green Score</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody id="delegationTableBody">
+                                    <tr>
+                                      <td colspan="15" class="text-center">Please select a date range to view delegation data</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+            
+                    <!-- MIS Process Details Modal -->
+                    <div id="misProcessModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 10000; justify-content: center; align-items: center;">
+                      <div style="background: white; border-radius: 8px; padding: 20px; width: 90%; max-width: 1000px; max-height: 80vh; overflow-y: auto; position: relative;">
+                        <button onclick="closeMisProcessModal()" style="position: absolute; top: 10px; right: 15px; font-size: 24px; background: none; border: none; cursor: pointer; color: #777;">&times;</button>
+                        <div style="border-bottom: 2px solid #dee2e6; padding-bottom: 10px; margin-bottom: 20px;">
+                          <h4 id="misModalTitle">Process Details</h4>
+                          <p id="misModalSubtitle" style="color: #777; margin-bottom: 0;"></p>
+                        </div>
+                        <div id="misProcessTableContainer">
+                          <!-- Process table will be populated here -->
+                        </div>
+                      </div>
+                    </div>
+            
+                    <div style="display: none;">
+                        <!-- Some hidden tables ... -->
+                    </div>
+                    <!-- Table Section -->
+          <section class="container my-4">
+            <div class="table-responsive" style="height: 400px; overflow-y: auto;">
+                            <h2 class="text-left mb-4 fs-4 fw-bold">Process Wise Task Details</h2>
+                            <table class="table table-striped table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="position: sticky; top: 0; background: #3498db; color: white; z-index: 1;">Email Address</th>
+                                        <th style="position: sticky; top: 0; background: #3498db; color: white; z-index: 1;">Doer Name</th>
+                                        <th style="position: sticky; top: 0; background: #3498db; color: white; z-index: 1;">Process Name</th>
+                                        <th style="position: sticky; top: 0; background: #3498db; color: white; z-index: 1;">Planned</th>
+                                        <th style="position: sticky; top: 0; background: #3498db; color: white; z-index: 1;">Step/Task Name</th>
+                                        <th style="position: sticky; top: 0; background: #3498db; color: white; z-index: 1;">Done</th>
+                                        <th style="position: sticky; top: 0; background: #3498db; color: white; z-index: 1;">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="data-table"></tbody>
+                            </table>
+            </div>
+          </section>
+                    <footer class="footer mt-auto py-3 bg-light" style="border-top: 0.7px solid black; height: 50px; margin-top: 10px">
+                        <!-- your footer -->
+                    </footer>
+                  `;
+
+            // 2) Now load Google Charts once:
+            google.charts.load('current', { packages: ['corechart'] });
+            google.charts.setOnLoadCallback(fetchData); // Only call this once
+
+            // 3) Fetch data from server
+            function fetchData() {
+                google.script.run.withSuccessHandler(function (data) {
+                    processData(data);
+                    document.getElementById('globalLoader').style.display = 'none';
+                }).getSheetData2();
+            }
+
+            // 4) Process data
+            function processData(data) {
+                // IMPORTANT: define both user & role here so they're in scope on first load
+                const loggedInUser = localStorage.getItem('userName');
+                const loggedInRole = localStorage.getItem('role');
+
+                // Update Cards
+                const totalTasks = data.length - 1; // Exclude headers
+                document.getElementById('total-tasks').innerText = totalTasks;
+
+                const overdueTasks = data.filter(row => row[6] === 'Over Due').length;
+                document.getElementById('overdue-tasks').innerText = overdueTasks;
+
+                const upcomingTasks = data.filter(row => row[6] === 'Up-Coming').length;
+                document.getElementById('upcoming-tasks').innerText = upcomingTasks;
+
+                const todayTasks = data.filter(row => row[6] === 'Today').length;
+                document.getElementById('today-tasks').innerText = todayTasks;
+
+                // Filter elements
+                const doerFilter = document.getElementById('doerFilter');
+                const processFilter = document.getElementById('processFilter');
+                const statusFilter = document.getElementById('statusFilter');
+                const resetButton = document.getElementById('resetFilters');
+                const resetDateRangeButton = document.getElementById('resetDateRange');
+                const resetAllFiltersButton = document.getElementById('resetAllFilters');
+                const tableBody = document.getElementById('data-table');
+
+                // Clear previous options
+                doerFilter.innerHTML = '<option value="">All</option>';
+                processFilter.innerHTML = '<option value="">All</option>';
+                statusFilter.innerHTML = '<option value="">All</option>';
+
+                // Extract unique values for filters
+                const doerNames = [...new Set(data.slice(1).map(row => row[1]))];
+                const processNames = [...new Set(data.slice(1).map(row => row[2]))];
+                const statuses = [...new Set(data.slice(1).map(row => row[6]))];
+
+                // Populate filter dropdowns
+                doerNames.forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    doerFilter.appendChild(option);
+                });
+                processNames.forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    processFilter.appendChild(option);
+                });
+                statuses.forEach(status => {
+                    const option = document.createElement('option');
+                    option.value = status;
+                    option.textContent = status;
+                    statusFilter.appendChild(option);
+                });
+
+                // Attach event listeners to trigger filtering when dropdown values change
+                doerFilter.addEventListener('change', function () {
+                    renderTable(data);
+                });
+                processFilter.addEventListener('change', function () {
+                    renderTable(data);
+                });
+                statusFilter.addEventListener('change', function () {
+                    renderTable(data);
+                });
+
+                // Attach event listener to the "Apply" button for date range filtering
+                document.getElementById('applyDateRange').addEventListener('click', function () {
+                    renderTable(data);
+                });
+
+                // (Optional) Also filter as soon as the dates change:
+                document.getElementById('startDate').addEventListener('change', function () {
+                    renderTable(data);
+                });
+                document.getElementById('endDate').addEventListener('change', function () {
+                    renderTable(data);
+                });
+
+                // Reset Filters
+                resetButton.addEventListener('click', function () {
+                    doerFilter.value = "";
+                    processFilter.value = "";
+                    statusFilter.value = "";
+                    document.getElementById('startDate').value = "";
+                    document.getElementById('endDate').value = "";
+
+                    renderTable(data);
+                });
+
+                resetDateRangeButton.addEventListener('click', function () {
+                    document.getElementById('startDate').value = "";
+                    document.getElementById('endDate').value = "";
+                    renderTable(data);
+                });
+
+                resetAllFiltersButton.addEventListener('click', function () {
+                    doerFilter.value = "";
+                    processFilter.value = "";
+                    statusFilter.value = "";
+                    document.getElementById('startDate').value = "";
+                    document.getElementById('endDate').value = "";
+
+                    renderTable(data);
+                });
+
+                function parseDashboardDate(dateStr) {
+                    // Expects "dd-MM-yyyy HH:mm:ss" or just "dd-MM-yyyy"
+                    if (!dateStr || typeof dateStr !== 'string') return new Date(NaN);
+
+                    var parts = dateStr.split(' ');
+                    var dateParts = parts[0].split('-');
+                    var day = parseInt(dateParts[0], 10);
+                    var month = parseInt(dateParts[1], 10) - 1;
+                    var year = parseInt(dateParts[2], 10);
+
+                    var d = new Date(year, month, day);
+
+                    if (parts[1]) {
+                        var timeParts = parts[1].split(':');
+                        d.setHours(parseInt(timeParts[0], 10) || 0);
+                        d.setMinutes(parseInt(timeParts[1], 10) || 0);
+                        d.setSeconds(parseInt(timeParts[2], 10) || 0);
+                    } else {
+                        d.setHours(0, 0, 0, 0);
+                    }
+                    return d;
+                }
+
+                // Define the function that renders the table
+                function renderTable(data) {
+                    const doerValue = doerFilter.value;
+                    const processValue = processFilter.value;
+                    const statusValue = statusFilter.value;
+                    // Retrieve date filter values from the input fields
+                    const startDateValue = document.getElementById('startDate').value;
+                    const endDateValue = document.getElementById('endDate').value;
+
+                    // Convert the input dates to Date objects; adjust end date to include the entire day.
+                    let start = startDateValue ? new Date(startDateValue) : null;
+                    let end = endDateValue ? new Date(endDateValue) : null;
+
+                    // Subtract one day from the start date to ensure that entries on the start date are included
+                    if (start) {
+                        start = new Date(start.getTime() - 86400000); // 86,400,000 ms = 1 day
+                        start.setHours(0, 0, 0, 0);
+                    }
+
+                    if (end) {
+                        end.setHours(23, 59, 59, 999);
+                    }
+
+                    // Filter data using the parsed dashboard date.
+                    const filteredData = data.slice(1).filter(row => {
+                        // Parse the row date using our helper function.
+                        const rowDate = parseDashboardDate(row[3]);
+                        const inRange = (!start || rowDate >= start) && (!end || rowDate <= end);
+
+                        // Existing conditions for filtering based on role and other filters.
+                        if (loggedInRole === 'user') {
+                            return (
+                                row[0] === loggedInUser &&
+                                (doerValue === '' || row[1] === doerValue) &&
+                                (processValue === '' || row[2] === processValue) &&
+                                (statusValue === '' || row[6] === statusValue) &&
+                                inRange
+                            );
+                        } else {
+                            return (
+                                (doerValue === '' || row[1] === doerValue) &&
+                                (processValue === '' || row[2] === processValue) &&
+                                (statusValue === '' || row[6] === statusValue) &&
+                                inRange
+                            );
+                        }
+                    });
+
+                    // Render the table
+                    tableBody.innerHTML = filteredData.length
+                        ? filteredData.map(row => `
+                            <tr>
+                              <td>${row[0]}</td>
+                              <td>${row[1]}</td>
+                              <td>${row[2]}</td>
+                              <td>${row[3]}</td>
+                              <td>${row[4]}</td>
+                              <td>
+                                <a href="${row[5]}" class="btn btn-primary" target="_blank" rel="noopener noreferrer">
+                                  <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                </a>
+                              </td>
+                              <td>${row[6]}</td>
+                            </tr>
+                          `).join('')
+                        : '<tr><td colspan="7">No data available for the selected filters.</td></tr>';
+
+                    // Update card counts
+                    document.getElementById('total-tasks').innerText = filteredData.length;
+                    document.getElementById('overdue-tasks').innerText = filteredData.filter(r => r[6] === 'Over Due').length;
+                    document.getElementById('upcoming-tasks').innerText = filteredData.filter(r => r[6] === 'Up-Coming').length;
+                    document.getElementById('today-tasks').innerText = filteredData.filter(r => r[6] === 'Today').length;
+
+                    updateDashboardFilters(filteredData);
+
+                    // Update charts with the newly filtered data
+                    if (localStorage.getItem('metricsVisible') === 'true') {
+                        updateCharts(filteredData);
+                    }
+                }
+
+                function updateDashboardFilters(filteredData) {
+                    // Get the dashboard filter dropdown elements
+                    const doerFilter = document.getElementById('doerFilter');
+                    const processFilter = document.getElementById('processFilter');
+                    const statusFilter = document.getElementById('statusFilter');
+
+                    // Save current selections so you can restore them if still valid
+                    const currentDoer = doerFilter.value;
+                    const currentProcess = processFilter.value;
+                    const currentStatus = statusFilter.value;
+
+                    // Clear existing options and add the "All" default option
+                    doerFilter.innerHTML = '<option value="">All</option>';
+                    processFilter.innerHTML = '<option value="">All</option>';
+                    statusFilter.innerHTML = '<option value="">All</option>';
+
+                    // Extract unique values from the filtered data (assuming row[1]=Doer, row[2]=Process, row[6]=Status)
+                    const doers = Array.from(new Set(filteredData.map(row => row[1]))).sort();
+                    const processes = Array.from(new Set(filteredData.map(row => row[2]))).sort();
+                    const statuses = Array.from(new Set(filteredData.map(row => row[6]))).sort();
+
+                    // Populate the dropdowns with the new options
+                    doers.forEach(val => {
+                        const option = document.createElement('option');
+                        option.value = val;
+                        option.textContent = val;
+                        doerFilter.appendChild(option);
+                    });
+
+                    processes.forEach(val => {
+                        const option = document.createElement('option');
+                        option.value = val;
+                        option.textContent = val;
+                        processFilter.appendChild(option);
+                    });
+
+                    statuses.forEach(val => {
+                        const option = document.createElement('option');
+                        option.value = val;
+                        option.textContent = val;
+                        statusFilter.appendChild(option);
+                    });
+
+                    // Restore the previous selections if they still exist in the filtered options
+                    if (doers.includes(currentDoer)) {
+                        doerFilter.value = currentDoer;
+                    }
+                    if (processes.includes(currentProcess)) {
+                        processFilter.value = currentProcess;
+                    }
+                    if (statuses.includes(currentStatus)) {
+                        statusFilter.value = currentStatus;
+                    }
+                }
+
+
+                // Draw initial charts with the full data
+                if (localStorage.getItem('metricsVisible') === 'true') {
+                    drawCharts(data);
+                }
+                // Finally, render the table initially
+                renderTable(data);
+            }
+
+            // Utility function to open link in new tab
+            function done(link) {
+                window.open(link, '_blank');
+            }
+
+            // 5) Charting functions
+            function drawCharts(data) {
+                const taskCounts = {};
+                const statusCounts = {};
+                const doerCounts = {};
+
+                data.slice(1).forEach(row => {
+                    const process = row[2];
+                    const doer = row[1];
+                    const status = row[6];
+                    doerCounts[doer] = (doerCounts[doer] || 0) + 1;
+                    taskCounts[process] = (taskCounts[process] || 0) + 1;
+                    statusCounts[status] = (statusCounts[status] || 0) + 1;
+                });
+
+                drawBarChart(taskCounts);
+                drawPieChart(statusCounts);
+                drawBarChart2(doerCounts);
+                drawBarChart3(statusCounts);
+            }
+
+            //------------------------------------------------
+            // 1) "Process-Wise Task Count"  (bar_chart_div)
+            //------------------------------------------------
+
+            function loadChartData() {
+                google.script.run.withSuccessHandler(function (taskCounts) {
+                    drawBarChart(taskCounts);
+                }).getTaskCounts();   // your backend chart data function
+            }
+
+            function drawBarChart(taskCounts) {
+                // Build array for Google Charts
+                const chartData = [
+                    ['Process', 'Count', { role: 'style' }, { role: 'annotation' }]
+                ];
+
+                if (Object.keys(taskCounts).length === 0) {
+                    chartData.push(["No Data", 0, 'color: #3498db', 0]);
+                } else {
+                    Object.entries(taskCounts).forEach(([process, count]) => {
+                        chartData.push([process, Number(count), 'color: #3498db', Number(count)]);
+                    });
+                }
+
+                // Convert array to DataTable
+                const dataTable = google.visualization.arrayToDataTable(chartData);
+
+                // Chart options
+                const options = {
+                    title: "Process-Wise Task Count (Columns Chart)",
+                    legend: { position: 'none' },
+                    annotations: {
+                        alwaysOutside: true,
+                        textStyle: { fontSize: 12, color: '#000' }
+                    }
+                };
+
+                // Create the chart object
+                const chart = new google.visualization.ColumnChart(
+                    document.getElementById('bar_chart_div')
+                );
+
+                // Draw the chart
+                chart.draw(dataTable, options);
+
+                // Store references globally, so we can re-draw later
+                window.myBarChart1 = chart;          // Chart object
+                window.myBarChart1Data = dataTable;  // Chart data
+                window.myBarChart1Options = options; // Chart options
+            }
+
+
+            //------------------------------------------------
+            // 2) "Process-Wise Status Breakdown" (pie_chart_div)
+            //------------------------------------------------
+            function drawPieChart(statusCounts) {
+                const chartData = [['Status', 'Count']];
+                // We'll define slices so we can force Over Due / Up-Coming / Today colors
+                const slices = {};
+                let rowIndex = 0;
+
+                if (Object.keys(statusCounts).length === 0) {
+                    chartData.push(["No Data", 0]);
+                } else {
+                    Object.entries(statusCounts).forEach(([status, count]) => {
+                        chartData.push([status, Number(count)]);
+
+                        // Color each status consistently:
+                        if (status === 'Over Due') {
+                            slices[rowIndex] = { color: '#e74c3c' };  // Red
+                        } else if (status === 'Up-Coming') {
+                            slices[rowIndex] = { color: '#91830d' };  // Brownish
+                        } else if (status === 'Today') {
+                            slices[rowIndex] = { color: '#27ae60' };  // Green
+                        }
+                        rowIndex++;
+                    });
+                }
+
+                const dataTable = google.visualization.arrayToDataTable(chartData);
+                const options = {
+                    title: "Process-Wise Status Breakdown (Pie Chart)",
+                    slices: slices
+                };
+
+                const chart = new google.visualization.PieChart(
+                    document.getElementById('pie_chart_div')
+                );
+                chart.draw(dataTable, options);
+
+                // Store references if needed
+                window.myPieChart1 = chart;
+                window.myPieChart1Data = dataTable;
+                window.myPieChart1Options = options;
+            }
+
+            //------------------------------------------------
+            // 3) "Doer-Wise Task Count" (bar_chart_div2)
+            //------------------------------------------------
+            function drawBarChart2(doerCounts) {
+                const chartData = [
+                    ['Doer', 'Count', { role: 'style' }, { role: 'annotation' }]
+                ];
+
+                if (Object.keys(doerCounts).length === 0) {
+                    chartData.push(["No Data", 0, 'color: #3498db', 0]);
+                } else {
+                    Object.entries(doerCounts).forEach(([doer, count]) => {
+                        chartData.push([doer, Number(count), 'color: #3498db', Number(count)]);
+                    });
+                }
+
+                const dataTable = google.visualization.arrayToDataTable(chartData);
+                const options = {
+                    title: "Doer-Wise Task Count (Columns Chart)",
+                    legend: { position: 'none' },
+                    chartArea: { width: '70%', left: '15%' },
+                    annotations: {
+                        alwaysOutside: true,
+                        textStyle: { fontSize: 12, color: '#000' }
+                    },
+                    hAxis: { title: 'Count' },
+                    vAxis: { title: 'Doer' }
+                };
+
+                const chart = new google.visualization.ColumnChart(
+                    document.getElementById('bar_chart_div2')
+                );
+                chart.draw(dataTable, options);
+
+                // Store references
+                window.myBarChart2 = chart;
+                window.myBarChart2Data = dataTable;
+                window.myBarChart2Options = options;
+            }
+
+
+            //------------------------------------------------
+            // 4) "Doer-Wise Status Count" (pie_chart_div2)
+            //    Actually it's a ColumnChart in your code
+            //------------------------------------------------
+            function drawBarChart3(statusCounts) {
+                const chartData = [
+                    ['Status', 'Count', { role: 'style' }, { role: 'annotation' }]
+                ];
+
+                if (Object.keys(statusCounts).length === 0) {
+                    chartData.push(["No Data", 0, 'color: #3498db', 0]);
+                } else {
+                    Object.entries(statusCounts).forEach(([status, count]) => {
+                        // Default to blue
+                        let color = 'color: #3498db';
+
+                        // Color each status consistently:
+                        if (status === 'Over Due') {
+                            color = 'color: #e74c3c';   // Red
+                        } else if (status === 'Up-Coming') {
+                            color = 'color: #91830d';  // Brownish
+                        } else if (status === 'Today') {
+                            color = 'color: #27ae60';  // Green
+                        }
+
+                        chartData.push([status, Number(count), color, Number(count)]);
+                    });
+                }
+
+                const dataTable = google.visualization.arrayToDataTable(chartData);
+                const options = {
+                    title: "Doer-Wise Status Count (Columns Chart)",
+                    legend: { position: 'none' },
+                    chartArea: { width: '70%', left: '15%' },
+                    annotations: {
+                        alwaysOutside: true,
+                        textStyle: { fontSize: 12, color: '#000' }
+                    },
+                    hAxis: { title: 'Count' },
+                    vAxis: { title: 'Status' }
+                };
+
+                const chart = new google.visualization.ColumnChart(
+                    document.getElementById('pie_chart_div2')
+                );
+                chart.draw(dataTable, options);
+
+                // Store references
+                window.myBarChart3 = chart;
+                window.myBarChart3Data = dataTable;
+                window.myBarChart3Options = options;
+            }
+
+            // 5) Called by renderTable() after filtering to update charts
+            function updateCharts(filteredData) {
+                const taskCounts = {};
+                const statusCounts = {};
+                const doerCounts = {};
+
+                filteredData.forEach(row => {
+                    const process = row[2];
+                    const doer = row[1];
+                    const status = row[6];
+                    doerCounts[doer] = (doerCounts[doer] || 0) + 1;
+                    taskCounts[process] = (taskCounts[process] || 0) + 1;
+                    statusCounts[status] = (statusCounts[status] || 0) + 1;
+                });
+
+                drawBarChart(taskCounts);
+                drawPieChart(statusCounts);
+                drawBarChart2(doerCounts);
+                drawBarChart3(statusCounts);
+            }
+
+            // Initialize MIS Score section
+            initializeMisScore();
+        }
+
+
+        // Load User Management page
+        function loadUserManagement() {
+            const userName = localStorage.getItem('userName');
+            const role = localStorage.getItem('role');
+
+            if (!userName || !role) {
+                displayAlertMessage('Please login first', 'warning');
+                return;
+            }
+
+            // Hide iframe and show sheet content
+            document.getElementById('linkContent').style.display = 'none';
+            document.getElementById('sheetContent').style.display = 'block';
+
+            // Show loader
+            const globalLoader = document.getElementById('globalLoader');
+            if (globalLoader) globalLoader.style.display = 'flex';
+
+            // Load User Management page HTML
+            google.script.run
+                .withSuccessHandler(function (html) {
+                    const sheetContent = document.getElementById('sheetContent');
+                    sheetContent.innerHTML = html;
+
+                    // Wait a brief moment for DOM to be ready, then initialize
+                    setTimeout(function () {
+                        // Evaluate any <script> tags inside the returned HTML
+                        const scripts = sheetContent.querySelectorAll("script");
+                        scripts.forEach(scr => {
+                            try {
+                                eval(scr.innerHTML);
+                            } catch (error) {
+                                console.error('Error evaluating User Management script:', error);
+                            }
+                        });
+
+                        // Ensure Google Apps Script context is available and trigger initialization
+                        if (typeof window.initializeUserManagementPage === 'function') {
+                            window.initializeUserManagementPage();
+                        } else {
+                            console.error('initializeUserManagementPage function not found!');
+                        }
+
+                        if (globalLoader) globalLoader.style.display = 'none';
+                    }, 100);
+                })
+                .withFailureHandler(function (err) {
+                    console.error('Failed to load User Management page:', err);
+                    const sheetContent = document.getElementById('sheetContent');
+                    sheetContent.innerHTML = '<div style="padding: 50px; text-align: center;"><h3>Error loading User Management page</h3><p>' + err + '</p></div>';
+                    if (globalLoader) globalLoader.style.display = 'none';
+                })
+                .getUserManagementPageHtml(userName, role);
+        }
+
+
+
+
+
+
+        // Handle login process
+        function handleLogin() {
+            const usernameInput = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const role = document.getElementById('role').value;
+            const loader = document.getElementById('globalLoader');
+
+            // Show loader before starting the login process
+            loader.style.display = 'flex';
+
+            google.script.run.withSuccessHandler(function (response) {
+                // Hide the loader once the login process is complete
+                loader.style.display = 'none';
+
+                if (response.success) {
+                    displayAlertMessage('Login successful!', 'success');
+                    // Store in localStorage so we can pick it up on first load
+                    localStorage.setItem('userName', usernameInput);
+                    localStorage.setItem('role', role);
+
+                    localStorage.setItem('displayName', response.displayName);
+                    localStorage.setItem('metricsVisible', response.metricsVisible);
+                    localStorage.setItem('profilePictureUrl', response.profilePictureUrl || '');
+
+                    userName = usernameInput; // update the global variable
+
+                    showMainContainer(usernameInput, response.displayName);
+                    // Build the sidebar
+                    google.script.run.withSuccessHandler(buildSidebar).getMenuStructure(usernameInput);
+                    // Now load the home page
+                    loadHomePage();
+
+                    document.getElementById('sidebar').style.display = 'block';
+
+                    // Reset the inactivity timer
+                    resetInactivityTimer();
+                } else {
+                    displayAlertMessage('Invalid username, password, or role.', 'danger');
+                }
+            }).checkLogin(usernameInput, password, role);
+        }
+
+        // Handle logout
+        function handleLogout() {
+            // Clear all timers when logging out
+            clearAllTimers();
+
+            const loader = document.getElementById('globalLoader');
+
+            // Clear localStorage and sessionStorage so stale data isn't reused
+            localStorage.removeItem('userName');
+            localStorage.removeItem('role');
+            localStorage.removeItem('displayName');
+            localStorage.removeItem('metricsVisible');
+            localStorage.removeItem('profilePictureUrl');
+            sessionStorage.clear();
+
+            // Clear the iframe's source (in case it was displaying a submenu link)
+            const linkFrame = document.getElementById('linkFrame');
+            if (linkFrame) linkFrame.src = "";
+
+            // Reset UI elements
+            showLoginContainer();
+            const profileTrigger = document.getElementById('profileTrigger');
+            if (profileTrigger) profileTrigger.style.display = 'none';
+
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) sidebar.style.display = "none";
+
+            const burger = document.getElementById('burger');
+            if (burger) burger.style.display = 'none';
+
+            const usernameField = document.getElementById('username');
+            if (usernameField) usernameField.value = '';
+
+            const passwordField = document.getElementById('password');
+            if (passwordField) passwordField.value = '';
+
+            const roleField = document.getElementById('role');
+            if (roleField) roleField.value = '';
+
+            // Show loader while logging out
+            if (loader) loader.style.display = 'flex';
+
+            // Hide loader and show logout message after a short delay
+            setTimeout(() => {
+                if (loader) loader.style.display = 'none';
+                displayAlertMessage('Logout successful!', 'danger');
+                onLoad(); // Reload the initial state
+            }, 1000);
+        }
+
+        // Function to display alert message
+        function displayAlertMessage(message, type) {
+            const responseMessage = document.getElementById('responseMessage');
+            if (responseMessage) {
+                responseMessage.innerText = message;
+                responseMessage.className = `alert alert-${type}`;
+                responseMessage.style.display = 'block';
+
+                // Hide the alert after a few seconds
+                setTimeout(() => {
+                    responseMessage.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // Toggle sidebar visibility
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContainer = document.getElementById('mainContainer');
+            // Toggle the sidebar visibility
+            sidebar.classList.toggle('show');
+            // Adjust the main container width
+            mainContainer.classList.toggle('with-sidebar');
+        }
+
+        function togglePasswordVisibility() {
+            const passwordField = document.getElementById("password");
+            const toggleIcon = document.getElementById("togglePassword");
+            if (passwordField.type === "password") {
+                passwordField.type = "text";
+                toggleIcon.classList.remove("fa-eye");
+                toggleIcon.classList.add("fa-eye-slash");
+            } else {
+                passwordField.type = "password";
+                toggleIcon.classList.remove("fa-eye-slash");
+                toggleIcon.classList.add("fa-eye");
+            }
+        }
+
+        function openEnlargedGraph(originalChartDivId, chartType, chartData, chartOptions) {
+            // Create the overlay element
+            const overlay = document.createElement('div');
+            overlay.className = 'enlarged-overlay';
+
+            // When clicking on overlay (outside the container), close the overlay with animation
+            overlay.addEventListener('click', function (e) {
+                if (e.target === overlay) {
+                    closeOverlay(overlay);
+                }
+            });
+
+            // Create the container that will hold the enlarged graph
+            const container = document.createElement('div');
+            container.className = 'enlarged-container';
+
+            // Create a close button
+            const closeButton = document.createElement('button');
+            closeButton.className = 'close-btn';
+            closeButton.innerHTML = '&times;';
+            closeButton.onclick = function (e) {
+                // Prevent the click from bubbling to the overlay
+                e.stopPropagation();
+                closeOverlay(overlay);
+            };
+            container.appendChild(closeButton);
+
+            // (Optional) Copy the title from the original card if available
+            const originalCard = document.getElementById(originalChartDivId).closest('.card');
+            if (originalCard) {
+                const titleEl = originalCard.querySelector('.card-title');
+                if (titleEl) {
+                    const titleClone = titleEl.cloneNode(true);
+                    container.appendChild(titleClone);
+                }
+            }
+
+            // Create a new div to host the enlarged chart
+            const enlargedChartDiv = document.createElement('div');
+            enlargedChartDiv.style.width = '100%';
+            // Reserve some height for the close button and optional title (adjust as needed)
+            enlargedChartDiv.style.height = 'calc(100% - 40px)';
+            container.appendChild(enlargedChartDiv);
+
+            // Append container to overlay and overlay to document body
+            overlay.appendChild(container);
+            document.body.appendChild(overlay);
+
+            // Force reflow so that the animation will trigger
+            window.getComputedStyle(overlay).opacity;
+
+            // Add the "show" class to start the opening animation
+            overlay.classList.add('show');
+            container.classList.add('show');
+
+            // Draw the chart into the new container
+            let chart;
+            if (chartType === 'barChart') {
+                chart = new google.visualization.ColumnChart(enlargedChartDiv);
+            } else if (chartType === 'pieChart') {
+                chart = new google.visualization.PieChart(enlargedChartDiv);
+            }
+            // Add further conditions if you have more chart types
+
+            chart.draw(chartData, chartOptions);
+        }
+
+        // Helper function to close the overlay with an animation
+        function closeOverlay(overlay) {
+            // Remove the "show" class to trigger the closing animation
+            overlay.classList.remove('show');
+            const container = overlay.querySelector('.enlarged-container');
+            if (container) {
+                container.classList.remove('show');
+            }
+            // Wait for the transition to finish (300ms) before removing from the DOM
+            setTimeout(function () {
+                if (overlay.parentNode) {
+                    overlay.parentNode.removeChild(overlay);
+                }
+            }, 300);
+        }
+
+        function safeString(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/'/g, "\\'")      // escape single quotes
+                .replace(/\r?\n/g, ' ');   // remove newlines
+        }
+
+        function initializeMisScore() {
+            console.log('Initializing MIS Score section...');
+            // Show MIS section
+            document.getElementById('misScoreSection').style.display = 'block';
+
+            // Wait a moment for the DOM to be ready, then setup filters
+            setTimeout(function () {
+                setupScoreCommonFilters();
+
+                // Initialize with MIS tab active
+                currentActiveTab = 'mis';
+            }, 100);
+        }
+
+        function resetScoreFilters() {
+            console.log('Resetting score filters to current week...');
+
+            // Calculate current Monday
+            const today = new Date();
+            const mondayOfCurrentWeek = new Date(today);
+            const dayOfWeek = today.getDay();
+            const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            mondayOfCurrentWeek.setDate(today.getDate() + mondayOffset);
+
+            // Set dates
+            const startDateStr = mondayOfCurrentWeek.toISOString().split('T')[0];
+            const scoreStartDate = document.getElementById('scoreStartDate');
+            const scoreEndDate = document.getElementById('scoreEndDate');
+
+            if (scoreStartDate) {
+                scoreStartDate.value = startDateStr;
+                updateScoreEndDate();
+                updateScoreWeekSelection();
+            }
+
+            // Reset user filters to all selected
+            const userCheckboxes = document.querySelectorAll('.score-user-checkbox');
+            if (userCheckboxes.length > 0) {
+                selectAllScoreUsers();
+            }
+
+            // Hide user filter if only one user
+            const userFilterContainer = document.getElementById('scoreUserFilterContainer');
+            if (userFilterContainer && userCheckboxes.length <= 1) {
+                userFilterContainer.style.display = 'none';
+            }
+
+            // Load data for current tab
+            setTimeout(function () {
+                loadCurrentTabData();
+            }, 100);
+
+            console.log('Score filters reset to current week:', startDateStr);
+        }
+
+        // Make reset function globally available  
+        window.resetScoreFilters = resetScoreFilters;
+
+        function renderMisTable(data) {
+            const tbody = document.getElementById('misTableBody');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="12" class="text-center">No MIS data found for selected date range</td></tr>';
+                return;
+            }
+
+            // Setup user filter if more than 1 user (reuse the common function)
+            setupScoreUserFilter(data);
+
+            // Apply user filter and render
+            renderFilteredMisTable(data);
+        }
+
+        // Add this new function for MIS table rendering
+        function renderFilteredMisTable(data) {
+            const filteredData = applyScoreUserFilter(data);
+            const tbody = document.getElementById('misTableBody');
+            tbody.innerHTML = '';
+
+            filteredData.forEach(function (row) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.userId}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.name}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.currentWeekScoreWND}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.totalTasks}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.totalCompletedTasks}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.wndScore}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.nextCommitmentWND}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.currentWeekScoreWNDOT}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.totalCompleteTasks}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.onTimeDoneTasks}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.wndotScore}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.nextCommitmentWNDOT}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">
+                    <button onclick="viewMisProcessDetails('${row.userId}', '${row.name}')" 
+                            style="background-color: #1A7499; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                      View
+                    </button>
+                  </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Prevent dropdown from closing when clicking inside
+        document.addEventListener('DOMContentLoaded', function () {
+            const dropdown = document.getElementById('misUserDropdown');
+            if (dropdown) {
+                dropdown.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                });
+            }
         });
-      }
-    }
-    
-    return { success: true, menus: menus, buttons: buttons };
-  } catch (error) {
-    Logger.log("Error in getAllMenusAndButtons: " + error);
-    return { error: "Failed to fetch menus and buttons: " + error.toString() };
-  }
-}
 
-/**
- * Create a new user and set up their permissions
- * @param {Object} userData - User information
- * @param {Array} permissions - Array of permission objects {mainMenu, subMenu, buttons: []}
- */
-/**
- * Create a new user and set up their permissions
- * @param {Object} userData - User information
- * @param {Array} permissions - Array of permission objects {mainMenu, subMenu, buttons: []}
- */
-function createNewUser(userData, permissions) {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const userSheet = ss.getSheetByName("User");
-    const permissionSheet = ss.getSheetByName("Permission");
-    
-    if (!userSheet || !permissionSheet) {
-      return { error: "Required sheets not found" };
-    }
-    
-    // Check if user already exists
-    const existingUsers = userSheet.getDataRange().getValues();
-    for (let i = 1; i < existingUsers.length; i++) {
-      if (existingUsers[i][0] === userData.userId) {
-        return { error: "User with this email already exists" };
-      }
-    }
+        function viewMisProcessDetails(userId, userName) {
+            const startDate = document.getElementById('scoreStartDate').value;
+            const endDate = document.getElementById('scoreEndDate').value;
 
-    // Handle File Upload to Drive if present
-    let profilePictureUrl = '';
-    if (userData.fileData && userData.fileData.content) {
-      try {
-        const contentType = userData.fileData.mimeType || 'application/octet-stream';
-        const blob = Utilities.newBlob(
-          Utilities.base64Decode(userData.fileData.content), 
-          contentType, 
-          userData.fileData.name || 'ProfilePicture'
-        );
-        
-        // Create file in specific folder for profile pictures
-        const PROFILE_PICTURES_FOLDER_ID = '1ZZ4HRkT0VZY6x-YXjlim1-fT4WPRAMsS';
-        const folder = DriveApp.getFolderById(PROFILE_PICTURES_FOLDER_ID);
-        const file = folder.createFile(blob);
-        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-        
-        // We use getUrl() which returns the preview link. 
-        // The frontend 'getThumbnailImageUrl' function extracts the ID from this to convert to a thumbnail.
-        profilePictureUrl = file.getUrl(); 
-      } catch (fileError) {
-        console.error('Error uploading file:', fileError);
-        return { error: "Failed to upload profile picture: " + fileError.toString() };
-      }
-    }
-    
-    // Add user to User sheet
-    // Columns: User ID, Password, Display Name, Role, Manager, Number, Metrics Visibility, Profile Picture
-    userSheet.appendRow([
-      userData.userId,
-      userData.password,
-      userData.displayName,
-      userData.role ? String(userData.role).toLowerCase() : 'user',
-      userData.manager || '',
-      userData.mobileNumber || '',
-      userData.metricsVisible || 'No', 
-      profilePictureUrl || ''
-    ]);
-    
-    // Add permissions to Permission sheet
-    permissions.forEach(perm => {
-      const buttonNames = perm.buttons && perm.buttons.length > 0 
-        ? perm.buttons.join(', ') 
-        : '';
-      
-      permissionSheet.appendRow([
-        userData.userId,
-        perm.mainMenu,
-        perm.subMenu,
-        buttonNames,
-        perm.accessType || ''
-      ]);
-    });
-    
-    return { success: true, message: "User created successfully" };
-  } catch (error) {
-    Logger.log("Error in createNewUser: " + error);
-    return { error: "Failed to create user: " + error.toString() };
-  }
-}
+            // Show modal immediately with loading
+            showMisProcessModalWithLoading(userId, userName, startDate, endDate);
 
-/**
- * Update an existing user
- */
-function updateUser(userData, permissions) {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const userSheet = ss.getSheetByName("User");
-    const permissionSheet = ss.getSheetByName("Permission");
-    
-    if (!userSheet || !permissionSheet) {
-      return { error: "Required sheets not found" };
-    }
-    
-    const data = userSheet.getDataRange().getValues();
-    let rowIndex = -1;
-    let existingRow = [];
-    
-    // Find user row (skip header)
-    for (let i = 1; i < data.length; i++) {
-        // Compare User ID (Email)
-      if (String(data[i][0]).toLowerCase() === String(userData.userId).toLowerCase()) {
-        rowIndex = i + 1; // 1-based index
-        existingRow = data[i];
-        break;
-      }
-    }
-    
-    if (rowIndex === -1) {
-      return { error: "User not found" };
-    }
-
-    // Handle File Upload: 
-    // If new file content is provided, upload and get new URL.
-    // If NOT provided, keep the existing URL (index 7).
-    let profilePictureUrl = existingRow[7]; 
-    
-    if (userData.fileData && userData.fileData.content) {
-      try {
-        const contentType = userData.fileData.mimeType || 'application/octet-stream';
-        const blob = Utilities.newBlob(
-          Utilities.base64Decode(userData.fileData.content), 
-          contentType, 
-          userData.fileData.name || 'ProfilePicture'
-        );
-        // Create file in specific folder for profile pictures
-        const PROFILE_PICTURES_FOLDER_ID = '1ZZ4HRkT0VZY6x-YXjlim1-fT4WPRAMsS';
-        const folder = DriveApp.getFolderById(PROFILE_PICTURES_FOLDER_ID);
-        const file = folder.createFile(blob);
-        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-        profilePictureUrl = file.getUrl();
-      } catch (fileError) {
-        console.error('Error uploading file:', fileError);
-        return { error: "Failed to upload new profile picture: " + fileError.toString() };
-      }
-    }
-
-    // Update User Sheet Row
-    // Columns: User ID, Password, Display Name, Role, Manager, Number, Metrics Visibility, Profile Picture
-    // We update all fields except User ID (assuming Email is immutable key for now)
-    const updatedRow = [
-      userData.userId, 
-      userData.password || existingRow[1], // Update password if sent, else keep existing? usually we should probably just update it if it's there. 
-      userData.displayName,
-      userData.role ? String(userData.role).toLowerCase() : existingRow[3],
-      userData.manager,
-      userData.mobileNumber,
-      userData.metricsVisible,
-      profilePictureUrl
-    ];
-    
-    // Set values for the row (startRow, startCol, numRows, numCols)
-    userSheet.getRange(rowIndex, 1, 1, 8).setValues([updatedRow]);
-    
-    // Update Permissions: Sync instead of Delete/Add (unless deactivating)
-    if (userData.role && userData.role.toLowerCase() !== 'deactivate') {
-      const permData = permissionSheet.getDataRange().getValues();
-      const userEmail = String(userData.userId).toLowerCase();
-      
-      // Find row indices for existing permissions of this user
-      const existingPermIndices = [];
-      for (let i = 1; i < permData.length; i++) {
-        if (String(permData[i][0]).toLowerCase() === userEmail) {
-          existingPermIndices.push(i + 1); // 1-based index
+            // Then fetch data
+            google.script.run
+                .withSuccessHandler(function (result) {
+                    if (result.success) {
+                        populateMisProcessModal(result.data);
+                    } else {
+                        showMisProcessModalError('Error: ' + result.error);
+                    }
+                })
+                .withFailureHandler(function (error) {
+                    showMisProcessModalError('Error loading process details: ' + error);
+                })
+                .getProcessDetails(userId, startDate, endDate);
         }
-      }
-      
-      // Synchronize permissions
-      const newPerms = permissions || [];
-      const countExisting = existingPermIndices.length;
-      const countNew = newPerms.length;
-      
-      // 1. Update existing rows as much as possible
-      const updateCount = Math.min(countExisting, countNew);
-      for (let i = 0; i < updateCount; i++) {
-        const rowInd = existingPermIndices[i];
-        const perm = newPerms[i];
-        const buttonNames = perm.buttons && perm.buttons.length > 0 ? perm.buttons.join(', ') : '';
-        const rowData = [userData.userId, perm.mainMenu, perm.subMenu, buttonNames, perm.accessType || ''];
-        permissionSheet.getRange(rowInd, 1, 1, 5).setValues([rowData]);
-      }
-      
-      // 2. Handle mismatch (Delete extras or Add missing)
-      if (countExisting > countNew) {
-        // Delete extra rows from BOTTOM to TOP to keep indices valid
-        for (let i = countExisting - 1; i >= updateCount; i--) {
-          permissionSheet.deleteRow(existingPermIndices[i]);
-        }
-      } else if (countNew > countExisting) {
-        // Append missing rows
-        for (let i = updateCount; i < countNew; i++) {
-          const perm = newPerms[i];
-          const buttonNames = perm.buttons && perm.buttons.length > 0 ? perm.buttons.join(', ') : '';
-          const rowData = [userData.userId, perm.mainMenu, perm.subMenu, buttonNames, perm.accessType || ''];
-          permissionSheet.appendRow(rowData);
-        }
-      }
-    } else {
-      // If deactivating, delete all permissions (as per current behavior)
-      const permData = permissionSheet.getDataRange().getValues();
-      for (let i = permData.length - 1; i >= 1; i--) {
-        if (String(permData[i][0]).toLowerCase() === String(userData.userId).toLowerCase()) {
-          permissionSheet.deleteRow(i + 1);
-        }
-      }
-    }
-    
-    return { success: true, message: "User updated successfully" };
-    
-  } catch (error) {
-    Logger.log("Error in updateUser: " + error);
-    return { error: "Failed to update user: " + error.toString() };
-  }
-}
 
-/**
- * Get permissions for a specific user
- */
-function getUserPermissions(userId) {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const permissionSheet = ss.getSheetByName("Permission");
-    
-    if (!permissionSheet) return { success: true, permissions: [] };
-    
-    const data = permissionSheet.getDataRange().getValues();
-    const permissions = [];
-    
-    // Skip header
-    for (let i = 1; i < data.length; i++) {
-      if (String(data[i][0]).toLowerCase() === String(userId).toLowerCase()) {
-        // Row: User, Main Menu, Sub Menu, Button Names, Access Type
-        permissions.push({
-          mainMenu: data[i][1],
-          subMenu: data[i][2],
-          buttons: data[i][3] ? String(data[i][3]).split(',').map(s => s.trim()) : [],
-          accessType: data[i][4]
+        function showMisProcessModalWithLoading(userId, userName, startDate, endDate) {
+            document.getElementById('misModalTitle').textContent = `Process Details - ${userName}`;
+            document.getElementById('misModalSubtitle').textContent = `${userId} | ${startDate} to ${endDate}`;
+
+            const container = document.getElementById('misProcessTableContainer');
+            container.innerHTML = `
+                <div style="display: flex; justify-content: center; align-items: center; padding: 50px;">
+                  <div style="border: 4px solid #f3f3f3; border-top: 4px solid #1A7499; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite;"></div>
+                </div>
+              `;
+
+            document.getElementById('misProcessModal').style.display = 'flex';
+        }
+
+        function populateMisProcessModal(processData) {
+            const container = document.getElementById('misProcessTableContainer');
+            container.innerHTML = '';
+
+            if (processData.length === 0) {
+                container.innerHTML = '<p style="text-align: center; padding: 20px;">No process data found for selected date range</p>';
+            } else {
+                const table = document.createElement('table');
+                table.style.width = '100%';
+                table.style.borderCollapse = 'collapse';
+
+                table.innerHTML = `
+                  <thead>
+                    <tr>
+                      <th style="background-color: #1A7499; color: white; padding: 10px; border: 1px solid #dee2e6;">Process Name</th>
+                      <th style="background-color: #1A7499; color: white; padding: 10px; border: 1px solid #dee2e6;">Total Task</th>
+                      <th style="background-color: #1A7499; color: white; padding: 10px; border: 1px solid #dee2e6;">Total Completed</th>
+                      <th style="background-color: #1A7499; color: white; padding: 10px; border: 1px solid #dee2e6;">Task Score</th>
+                      <th style="background-color: #1A7499; color: white; padding: 10px; border: 1px solid #dee2e6;">Total Complete Task</th>
+                      <th style="background-color: #1A7499; color: white; padding: 10px; border: 1px solid #dee2e6;">On Time Done Task</th>
+                      <th style="background-color: #1A7499; color: white; padding: 10px; border: 1px solid #dee2e6;">Time Score</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${processData.map(process => `
+                      <tr>
+                        <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">${process.processName}</td>
+                        <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">${process.totalTasks}</td>
+                        <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">${process.totalCompleted}</td>
+                        <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">${process.taskScore}</td>
+                        <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">${process.totalCompleteTasks}</td>
+                        <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">${process.onTimeDoneTasks}</td>
+                        <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">${process.timeScore}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                `;
+
+                container.appendChild(table);
+            }
+        }
+
+        function showMisProcessModalError(errorMessage) {
+            const container = document.getElementById('misProcessTableContainer');
+            container.innerHTML = `<p style="text-align: center; color: red; padding: 20px;">${errorMessage}</p>`;
+        }
+
+        function showMisProcessModal(processData, userId, userName, startDate, endDate) {
+            document.getElementById('misModalTitle').textContent = `Process Details - ${userName}`;
+            document.getElementById('misModalSubtitle').textContent = `${userId} | ${startDate} to ${endDate}`;
+
+            const container = document.getElementById('misProcessTableContainer');
+            container.innerHTML = '';
+
+            if (processData.length === 0) {
+                container.innerHTML = '<p style="text-align: center;">No process data found for selected date range</p>';
+            } else {
+                const table = document.createElement('table');
+                table.style.width = '100%';
+                table.style.borderCollapse = 'collapse';
+
+                table.innerHTML = `
+                  <thead>
+                    <tr>
+                      <th style="background-color: #1A7499; color: white; padding: 10px; border: 1px solid #dee2e6;">Process Name</th>
+                      <th style="background-color: #1A7499; color: white; padding: 10px; border: 1px solid #dee2e6;">Total Task</th>
+                      <th style="background-color: #1A7499; color: white; padding: 10px; border: 1px solid #dee2e6;">Total Completed</th>
+                      <th style="background-color: #1A7499; color: white; padding: 10px; border: 1px solid #dee2e6;">Task Score</th>
+                      <th style="background-color: #1A7499; color: white; padding: 10px; border: 1px solid #dee2e6;">Total Complete Task</th>
+                      <th style="background-color: #1A7499; color: white; padding: 10px; border: 1px solid #dee2e6;">On Time Done Task</th>
+                      <th style="background-color: #1A7499; color: white; padding: 10px; border: 1px solid #dee2e6;">Time Score</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${processData.map(process => `
+                      <tr>
+                        <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">${process.processName}</td>
+                        <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">${process.totalTasks}</td>
+                        <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">${process.totalCompleted}</td>
+                        <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">${process.taskScore}</td>
+                        <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">${process.totalCompleteTasks}</td>
+                        <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">${process.onTimeDoneTasks}</td>
+                        <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">${process.timeScore}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                `;
+
+                container.appendChild(table);
+            }
+
+            document.getElementById('misProcessModal').style.display = 'flex';
+        }
+
+        function closeMisProcessModal() {
+            document.getElementById('misProcessModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        document.addEventListener('click', function (e) {
+            const modal = document.getElementById('misProcessModal');
+            if (e.target === modal) {
+                closeMisProcessModal();
+            }
         });
-      }
-    }
-    
-    return { success: true, permissions: permissions };
-  } catch (error) {
-    return { error: "Failed to fetch user permissions: " + error.toString() };
-  }
-}
 
-/**
- * Delete a user and all their permissions
- * @param {string} userId - The email/user ID to delete
- */
-function deleteUser(userId) {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const userSheet = ss.getSheetByName("User");
-    const permissionSheet = ss.getSheetByName("Permission");
-    
-    if (!userSheet) {
-      return { error: "User sheet not found" };
-    }
-    
-    // 1. Find and delete user from User sheet
-    const userData = userSheet.getDataRange().getValues();
-    let userRowIndex = -1;
-    
-    for (let i = 1; i < userData.length; i++) {
-      if (String(userData[i][0]).toLowerCase() === String(userId).toLowerCase()) {
-        userRowIndex = i + 1; // 1-based index
-        break;
-      }
-    }
-    
-    if (userRowIndex === -1) {
-      return { error: "User not found" };
-    }
-    
-    // Delete user row
-    userSheet.deleteRow(userRowIndex);
-    
-    // 2. Delete all permissions for this user
-    if (permissionSheet) {
-      const permData = permissionSheet.getDataRange().getValues();
-      // Iterate backwards to delete rows safely
-      for (let i = permData.length - 1; i >= 1; i--) {
-        if (String(permData[i][0]).toLowerCase() === String(userId).toLowerCase()) {
-          permissionSheet.deleteRow(i + 1);
+        // Global variables for delegation
+        var currentDelegationData = [];
+        var currentActiveTab = 'mis';
+
+        // Tab switching function
+        function switchScoreTab(tabName) {
+            currentActiveTab = tabName;
+            if (tabName === 'mis') {
+                loadMisData();
+            } else if (tabName === 'delegation') {
+                loadDelegationData();
+            }
         }
-      }
-    }
-    
-    return { success: true, message: "User deleted successfully" };
-  } catch (error) {
-    Logger.log("Error in deleteUser: " + error);
-    return { error: "Failed to delete user: " + error.toString() };
-  }
-}
- 
-// ... (rest of the file)
 
-/**
- * Get User Management page HTML
- */
-function getUserManagementPageHtml(userName, role) {
-  const template = HtmlService.createTemplateFromFile('UserManagement');
-  template.userName = userName;
-  template.role = role;
-  
-  return template.evaluate().getContent();
-}
+        // Common filter functions
+        function setupScoreCommonFilters() {
+            // Load available weeks for common filters
+            google.script.run
+                .withSuccessHandler(function (weeks) {
+                    const weekSelect = document.getElementById('scoreWeekNumber');
+                    if (!weekSelect) {
+                        console.error('scoreWeekNumber element not found');
+                        return;
+                    }
+                    weekSelect.innerHTML = '<option value="">Select Week...</option>';
 
-// Add after the existing MIS functions
+                    if (weeks && weeks.length > 0) {
+                        weeks.forEach(function (week) {
+                            const option = document.createElement('option');
+                            option.value = week.weekNumber;
+                            option.textContent = week.label;
+                            option.dataset.startDate = week.startDate;
+                            option.dataset.endDate = week.endDate;
+                            weekSelect.appendChild(option);
+                        });
+                    }
+                })
+                .withFailureHandler(function (error) {
+                    console.error('Error loading weeks:', error);
+                })
+                .getAvailableWeeks();
 
-/**
- * Get delegation data from external sheet
- */
-function getDelegationData(userName, role) {
-  try {
-    const externalSheetId = getExternalSheetId();
-    if (!externalSheetId) {
-      return { error: "External sheet ID not found in SetUP sheet cell B3" };
-    }
-    
-    const externalSS = SpreadsheetApp.openById(externalSheetId);
-    const dataSheet = externalSS.getSheetByName("deligation_data");
-    
-    if (!dataSheet) {
-      return { error: "Delegation data sheet not found in external spreadsheet" };
-    }
-    
-    const data = dataSheet.getDataRange().getValues();
-    if (data.length <= 1) {
-      return { success: true, data: [] };
-    }
-    
-    // Filter data based on user role
-    let filteredData = data.slice(1); // Remove header
-    
-    if (role !== 'admin') {
-      filteredData = filteredData.filter(row => 
-        String(row[1]).toLowerCase() === String(userName).toLowerCase() // Column B is Email
-      );
-    }
-    
-    return { success: true, data: filteredData, headers: data[0] };
-  } catch (error) {
-    console.error("Error getting delegation data:", error);
-    return { error: "Failed to retrieve delegation data: " + error.toString() };
-  }
-}
+            // Set default dates
+            setScoreDefaultDates();
 
-/**
- * Get delegation work commitments data
- */
-function getDelegationWorkCommitments() {
-  try {
-    const externalSheetId = getExternalSheetId();
-    if (!externalSheetId) return [];
-    
-    const externalSS = SpreadsheetApp.openById(externalSheetId);
-    const commitmentSheet = externalSS.getSheetByName("deligation_workCommitments");
-    
-    if (!commitmentSheet) {
-      return []; // Return empty array if sheet doesn't exist
-    }
-    
-    const data = commitmentSheet.getDataRange().getValues();
-    return data.length > 1 ? data.slice(1) : []; // Remove header if exists
-  } catch (error) {
-    console.error("Error getting delegation work commitments:", error);
-    return [];
-  }
-}
+            // Setup event listeners
+            const scoreStartDate = document.getElementById('scoreStartDate');
+            const scoreWeekNumber = document.getElementById('scoreWeekNumber');
+            const refreshScoreBtn = document.getElementById('refreshScoreBtn');
 
-/**
- * Calculate delegation scores for dashboard
- */
-function calculateDelegationScores(userName, role, startDate, endDate) {
-  try {
-    const delegationDataResult = getDelegationData(userName, role);
-    if (delegationDataResult.error) {
-      return delegationDataResult;
-    }
-    
-    const delegationData = delegationDataResult.data;
-    const workCommitments = getDelegationWorkCommitments();
-    
-    // Parse dates
-    const filterStartDate = new Date(startDate);
-    filterStartDate.setHours(0, 0, 0, 0);
-    
-    const filterEndDate = new Date(endDate);
-    filterEndDate.setHours(23, 59, 59, 999);
-    
-    // Filter data by date range (Due Date column - index 4)
-    const filteredData = delegationData.filter(row => {
-      if (!row[4]) return false; // Skip empty due dates
-      const dueDate = new Date(row[4]);
-      dueDate.setHours(0, 0, 0, 0);
-      return dueDate >= filterStartDate && dueDate <= filterEndDate;
-    });
-    
-    // Group by user
-    const userGroups = {};
-    filteredData.forEach(row => {
-      const email = row[1]; // Email column
-      const assignTo = row[2]; // Assign to column
-      
-      if (!userGroups[email]) {
-        userGroups[email] = {
-          email: email,
-          name: assignTo,
-          tasks: []
-        };
-      }
-      userGroups[email].tasks.push(row);
-    });
-    
-    // Calculate scores for each user
-    const results = [];
-    const selectedWeekNumber = getWeekNumber(filterStartDate);
-    const previousWeekNumber = selectedWeekNumber - 1;
-    
-    Object.keys(userGroups).forEach(email => {
-      const userGroup = userGroups[email];
-      const tasks = userGroup.tasks;
-      
-      // Calculate task counts
-      const totalTasks = tasks.length;
-      const completedTasks = tasks.filter(task => task[9] === 'Complete').length; // Status column
-      const pendingTasks = tasks.filter(task => task[9] === 'Pending').length;
-      const shiftedTasks = tasks.filter(task => task[9] === 'Shifted').length;
-      
-      // Calculate scores for completed and shifted tasks only
-      const completedAndShiftedTasks = tasks.filter(task => 
-        task[9] === 'Complete' || task[9] === 'Shifted'
-      );
-      const completedAndShiftedCount = completedAndShiftedTasks.length;
-      
-      let redScore = 0, yellowScore = 0, greenScore = 0;
-      let redCount = 0, yellowCount = 0, greenCount = 0;  // Declare outside the if block
+            if (scoreStartDate) {
+                scoreStartDate.addEventListener('change', function () {
+                    updateScoreEndDate();
+                    updateScoreWeekSelection();
+                    loadCurrentTabData();
+                });
+            }
 
-      if (completedAndShiftedCount > 0) {
-        // Red: both revision 1 and 2 are non-empty
-        redCount = completedAndShiftedTasks.filter(task => 
-          task[5] && task[5] !== '' && task[6] && task[6] !== ''
-        ).length;
-        
-        // Yellow: revision 1 is non-empty but revision 2 is empty
-        yellowCount = completedAndShiftedTasks.filter(task => 
-          task[5] && task[5] !== '' && (!task[6] || task[6] === '')
-        ).length;
-        
-        // Green: both revision 1 and 2 are empty
-        greenCount = completedAndShiftedTasks.filter(task => 
-          (!task[5] || task[5] === '') && (!task[6] || task[6] === '')
-        ).length;
-        
-        redScore = Math.round((redCount / completedAndShiftedCount) * 100 * 100) / 100;
-        yellowScore = Math.round((yellowCount / completedAndShiftedCount) * 100 * 100) / 100;
-        greenScore = Math.round((greenCount / completedAndShiftedCount) * 100 * 100) / 100;
-      }
-      
-      // Get previous week commitments (for "Current Planned")
-      const previousCommitments = workCommitments.find(commitment => 
-        commitment[0] === email && commitment[1] === previousWeekNumber
-      );
-      
-      const currentPlannedRed = previousCommitments ? (previousCommitments[4] || 0) : 0;
-      const currentPlannedYellow = previousCommitments ? (previousCommitments[5] || 0) : 0;
-      const currentPlannedGreen = previousCommitments ? (previousCommitments[6] || 0) : 0;
-      
-      // Get current week commitments (for "Next Committed")
-      const currentCommitments = workCommitments.find(commitment => 
-        commitment[0] === email && commitment[1] === selectedWeekNumber
-      );
-      
-      results.push({
-        userId: email,
-        name: userGroup.name,
-        currentPlannedRed: currentPlannedRed,
-        currentPlannedYellow: currentPlannedYellow,
-        currentPlannedGreen: currentPlannedGreen,
-        currentScoreRed: redScore,
-        currentScoreYellow: yellowScore,
-        currentScoreGreen: greenScore,
-        currentScoreRedCount: redCount,
-        currentScoreYellowCount: yellowCount,
-        currentScoreGreenCount: greenCount,
-        totalTasks: totalTasks,
-        completedTasks: completedTasks,
-        pendingTasks: pendingTasks,
-        shiftedTasks: shiftedTasks,
-        nextCommittedRed: currentCommitments ? (currentCommitments[4] || '') : '',
-        nextCommittedYellow: currentCommitments ? (currentCommitments[5] || '') : '',
-        nextCommittedGreen: currentCommitments ? (currentCommitments[6] || '') : '',
-        weekNumber: selectedWeekNumber
-      });
-    });
-    
-    return { success: true, data: results };
-  } catch (error) {
-    console.error("Error calculating delegation scores:", error);
-    return { error: "Failed to calculate delegation scores: " + error.toString() };
-  }
-}
+            if (scoreWeekNumber) {
+                scoreWeekNumber.addEventListener('change', function () {
+                    updateScoreDatesFromWeek();
+                    loadCurrentTabData();
+                });
+            }
 
-/**
- * Save delegation work commitments
- */
-function saveDelegationWorkCommitments(userEmail, weekNumber, startDate, endDate, redCommitment, yellowCommitment, greenCommitment) {
-  try {
-    console.log('saveDelegationWorkCommitments called with:', {
-      userEmail, weekNumber, startDate, endDate, redCommitment, yellowCommitment, greenCommitment
-    });
-    
-    const externalSheetId = getExternalSheetId();
-    if (!externalSheetId) {
-      console.error('External sheet ID not found');
-      return { error: "External sheet ID not found" };
-    }
-    
-    console.log('External sheet ID:', externalSheetId);
-    
-    const externalSS = SpreadsheetApp.openById(externalSheetId);
-    let commitmentSheet = externalSS.getSheetByName("deligation_workCommitments");
-    
-    // Create sheet if it doesn't exist
-    if (!commitmentSheet) {
-      console.log('Creating deligation_workCommitments sheet');
-      commitmentSheet = externalSS.insertSheet("deligation_workCommitments");
-      commitmentSheet.getRange(1, 1, 1, 7).setValues([
-        ["UserId", "Week Number", "Start Date", "End Date", "Red Score", "Yellow Score", "Green Score"]
-      ]);
-    }
-    
-    const data = commitmentSheet.getDataRange().getValues();
-    console.log('Existing data rows:', data.length);
-    
-    // Find existing row for this user and week
-    let rowIndex = -1;
-    for (let i = 1; i < data.length; i++) {
-      if (data[i][0] === userEmail && data[i][1] == weekNumber) {
-        rowIndex = i + 1; // Convert to 1-based index
-        console.log('Found existing row at index:', rowIndex);
-        break;
-      }
-    }
-    
-    const newRow = [userEmail, parseInt(weekNumber), startDate, endDate, redCommitment, yellowCommitment, greenCommitment];
-    console.log('New row data:', newRow);
-    
-    if (rowIndex > 0) {
-      // Update existing row
-      console.log('Updating existing row');
-      commitmentSheet.getRange(rowIndex, 1, 1, 7).setValues([newRow]);
-    } else {
-      // Add new row
-      console.log('Adding new row');
-      commitmentSheet.appendRow(newRow);
-    }
-    
-    console.log('Save completed successfully');
-    return { success: true, message: "Delegation commitments saved successfully" };
-  } catch (error) {
-    console.error("Error saving delegation work commitments:", error);
-    return { error: "Failed to save delegation commitments: " + error.toString() };
-  }
-}
-/**
- * Master Sheet Management Functions (Create Button)
- */
+            if (refreshScoreBtn) {
+                refreshScoreBtn.addEventListener('click', loadCurrentTabData);
+            }
 
-function getMasterSheetData() {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName("Master Sheet");
-    if (!sheet) return { error: "Master Sheet not found" };
-    
-    if (sheet.getLastRow() < 2) return { success: true, data: [] };
-    
-    const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 8).getValues();
-    return { success: true, data: data };
-  } catch (e) {
-    return { error: e.toString() };
-  }
-}
+            // Add reset button event listener
+            const resetScoreBtn = document.getElementById('resetScoreBtn');
+            if (resetScoreBtn) {
+                resetScoreBtn.addEventListener('click', resetScoreFilters);
+            }
+        }
 
-function saveMasterSheetEntry(entryData) {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName("Master Sheet");
-    if (!sheet) return { error: "Master Sheet not found" };
+        function setScoreDefaultDates() {
+            const today = new Date();
+            const mondayOfCurrentWeek = new Date(today);
+            const dayOfWeek = today.getDay();
+            const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            mondayOfCurrentWeek.setDate(today.getDate() + mondayOffset);
 
-    const split = parseEntryViewable(entryData.entryViewable);
-    
-    const newRow = [
-      entryData.mainMenu,
-      entryData.subMenu,
-      entryData.sheetName,
-      entryData.dbLink,
-      entryData.externalId,
-      entryData.rangeSpec,
-      split.question,
-      split.table
-    ];
-    
-    sheet.appendRow(newRow);
-    return { success: true };
-  } catch (e) {
-    return { error: e.toString() };
-  }
-}
+            const scoreStartDate = document.getElementById('scoreStartDate');
+            if (scoreStartDate) {
+                scoreStartDate.value = mondayOfCurrentWeek.toISOString().split('T')[0];
+                updateScoreEndDate();
+                updateScoreWeekSelection();
 
-function updateMasterSheetEntry(entryData) {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName("Master Sheet");
-    if (!sheet) return { error: "Master Sheet not found" };
+                setTimeout(loadCurrentTabData, 500);
+            }
+        }
 
-    const rowIndex = entryData.index + 2; // +1 for 0-indexing, +1 for header
-    const split = parseEntryViewable(entryData.entryViewable);
-    
-    const updatedRow = [
-      entryData.mainMenu,
-      entryData.subMenu,
-      entryData.sheetName,
-      entryData.dbLink,
-      entryData.externalId,
-      entryData.rangeSpec,
-      split.question,
-      split.table
-    ];
-    
-    sheet.getRange(rowIndex, 1, 1, 8).setValues([updatedRow]);
-    return { success: true };
-  } catch (e) {
-    return { error: e.toString() };
-  }
-}
+        function updateScoreEndDate() {
+            const scoreStartDate = document.getElementById('scoreStartDate');
+            const scoreEndDate = document.getElementById('scoreEndDate');
 
-function deleteMasterSheetEntry(index) {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName("Master Sheet");
-    if (!sheet) return { error: "Master Sheet not found" };
+            if (!scoreStartDate || !scoreEndDate) return;
 
-    const rowIndex = index + 2;
-    sheet.deleteRow(rowIndex);
-    return { success: true };
-  } catch (e) {
-    return { error: e.toString() };
-  }
-}
+            const startDate = scoreStartDate.value;
+            if (startDate) {
+                const endDate = new Date(startDate);
+                endDate.setDate(endDate.getDate() + 6);
+                scoreEndDate.value = endDate.toISOString().split('T')[0];
+            }
+        }
 
-/**
- * Helper to parse (a,b)(c,d) into {question: "a,b", table: "c,d"}
- */
-function parseEntryViewable(str) {
-  const result = { question: "", table: "" };
-  if (!str) return result;
-  
-  // Look for parenthesis groups
-  const matches = str.match(/\(([^)]+)\)/g);
-  if (matches) {
-    if (matches[0]) result.question = matches[0].replace(/[()]/g, '');
-    if (matches[1]) result.table = matches[1].replace(/[()]/g, '');
-  } else {
-    // Fallback if no parenthesis, just put everything in question
-    result.question = str;
-  }
-  return result;
-}
-/**
- * Create Button Sheet Management Functions
- */
+        function updateScoreWeekSelection() {
+            const scoreStartDate = document.getElementById('scoreStartDate');
+            const scoreWeekNumber = document.getElementById('scoreWeekNumber');
 
-function getCreateButtonData() {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName("Create Button");
-    if (!sheet) return { error: "Create Button sheet not found" };
-    
-    if (sheet.getLastRow() < 2) return { success: true, data: [] };
-    
-    // Fetching 4 columns as seen in getAllMenusAndButtons
-    const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
-    return { success: true, data: data };
-  } catch (e) {
-    return { error: e.toString() };
-  }
-}
+            if (!scoreStartDate || !scoreWeekNumber) return;
 
-function saveCreateButtonEntry(entryData) {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName("Create Button");
-    if (!sheet) return { error: "Create Button sheet not found" };
+            const startDate = scoreStartDate.value;
+            if (!startDate) return;
 
-    const newRow = [
-      entryData.mainMenu,
-      entryData.subMenu,
-      entryData.buttonName,
-      entryData.extra || "" // Column 4 placeholder
-    ];
-    
-    sheet.appendRow(newRow);
-    return { success: true };
-  } catch (e) {
-    return { error: e.toString() };
-  }
-}
+            const options = scoreWeekNumber.querySelectorAll('option');
 
-function updateCreateButtonEntry(entryData) {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName("Create Button");
-    if (!sheet) return { error: "Create Button sheet not found" };
+            for (let option of options) {
+                if (option.dataset.startDate === startDate) {
+                    scoreWeekNumber.value = option.value;
+                    break;
+                }
+            }
+        }
 
-    const rowIndex = entryData.index + 2; 
-    const updatedRow = [
-      entryData.mainMenu,
-      entryData.subMenu,
-      entryData.buttonName,
-      entryData.extra || ""
-    ];
-    
-    sheet.getRange(rowIndex, 1, 1, 4).setValues([updatedRow]);
-    return { success: true };
-  } catch (e) {
-    return { error: e.toString() };
-  }
-}
+        function updateScoreDatesFromWeek() {
+            const scoreWeekNumber = document.getElementById('scoreWeekNumber');
+            const scoreStartDate = document.getElementById('scoreStartDate');
+            const scoreEndDate = document.getElementById('scoreEndDate');
 
-function deleteCreateButtonEntry(index) {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName("Create Button");
-    if (!sheet) return { error: "Create Button sheet not found" };
+            if (!scoreWeekNumber || !scoreStartDate || !scoreEndDate) return;
 
-    const rowIndex = index + 2;
-    sheet.deleteRow(rowIndex);
-    return { success: true };
-  } catch (e) {
-    return { error: e.toString() };
-  }
-}
+            const selectedOption = scoreWeekNumber.options[scoreWeekNumber.selectedIndex];
 
-/**
- * Bulk Save Master Sheet Entries
- */
-function saveBulkMasterSheetEntries(entries) {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName("Master Sheet");
-    if (!sheet) return { error: "Master Sheet not found" };
+            if (selectedOption && selectedOption.dataset.startDate) {
+                const startDate = selectedOption.dataset.startDate;
+                const endDate = selectedOption.dataset.endDate;
 
-    const rowsToAdd = entries.map(entry => {
-      const split = parseEntryViewable(entry.entryViewable);
-      return [
-        entry.mainMenu,
-        entry.subMenu,
-        entry.sheetName,
-        entry.dbLink,
-        entry.externalId,
-        entry.rangeSpec,
-        split.question,
-        split.table
-      ];
-    });
+                scoreStartDate.value = startDate;
+                scoreEndDate.value = endDate;
+            }
+        }
 
-    if (rowsToAdd.length > 0) {
-      const lastRow = sheet.getLastRow();
-      sheet.getRange(lastRow + 1, 1, rowsToAdd.length, 8).setValues(rowsToAdd);
-    }
-    
-    return { success: true };
-  } catch (e) {
-    return { error: e.toString() };
-  }
-}
+        function loadCurrentTabData() {
+            if (currentActiveTab === 'mis') {
+                loadMisData();
+            } else if (currentActiveTab === 'delegation') {
+                loadDelegationData();
+            }
+        }
 
-/**
- * Bulk Save Create Button Entries
- */
-function saveBulkCreateButtonEntries(entries) {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName("Create Button");
-    if (!sheet) return { error: "Create Button sheet not found" };
+        // Update the loadMisData function to use the correct element IDs
+        function loadMisData() {
+            const startDate = document.getElementById('scoreStartDate').value;
+            const endDate = document.getElementById('scoreEndDate').value;
 
-    const rowsToAdd = entries.map(entry => [
-      entry.mainMenu,
-      entry.subMenu,
-      entry.buttonName,
-      entry.extra || ""
-    ]);
+            if (!startDate || !endDate) {
+                document.getElementById('misTableBody').innerHTML = '<tr><td colspan="12" class="text-center">Please select a date range to view MIS data</td></tr>';
+                return;
+            }
 
-    if (rowsToAdd.length > 0) {
-      const lastRow = sheet.getLastRow();
-      sheet.getRange(lastRow + 1, 1, rowsToAdd.length, 4).setValues(rowsToAdd);
-    }
-    
-    return { success: true };
-  } catch (e) {
-    return { error: e.toString() };
-  }
-}
+            // Show loading
+            document.getElementById('misTableBody').innerHTML = '<tr><td colspan="12" class="text-center"><div style="display: flex; justify-content: center; align-items: center;"><div style="border: 4px solid #f3f3f3; border-top: 4px solid #1A7499; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite;"></div></div></td></tr>';
+
+            const loggedInUser = localStorage.getItem('userName');
+            const loggedInRole = localStorage.getItem('role');
+
+            google.script.run
+                .withSuccessHandler(function (result) {
+                    if (result.success) {
+                        currentMisData = result.data;
+                        renderMisTable(result.data);
+                    } else {
+                        console.error('MIS Error:', result.error);
+                        renderMisTable([]);
+                    }
+                })
+                .withFailureHandler(function (error) {
+                    console.error('Error loading MIS data:', error);
+                    renderMisTable([]);
+                })
+                .calculateMISScores(loggedInUser, loggedInRole, startDate, endDate);
+        }
+
+        // Update the loadDelegationData function to use the correct element IDs
+        function loadDelegationData() {
+            const startDate = document.getElementById('scoreStartDate').value;
+            const endDate = document.getElementById('scoreEndDate').value;
+
+            if (!startDate || !endDate) {
+                document.getElementById('delegationTableBody').innerHTML = '<tr><td colspan="15" class="text-center">Please select a date range to view delegation data</td></tr>';
+                return;
+            }
+
+            // Show loading
+            document.getElementById('delegationTableBody').innerHTML = '<tr><td colspan="15" class="text-center"><div style="display: flex; justify-content: center; align-items: center;"><div style="border: 4px solid #f3f3f3; border-top: 4px solid #1A7499; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite;"></div></div></td></tr>';
+
+            const loggedInUser = localStorage.getItem('userName');
+            const loggedInRole = localStorage.getItem('role');
+
+            google.script.run
+                .withSuccessHandler(function (result) {
+                    if (result.success) {
+                        currentDelegationData = result.data;
+                        renderDelegationTable(result.data);
+                    } else {
+                        console.error('Delegation Error:', result.error);
+                        renderDelegationTable([]);
+                    }
+                })
+                .withFailureHandler(function (error) {
+                    console.error('Error loading delegation data:', error);
+                    renderDelegationTable([]);
+                })
+                .calculateDelegationScores(loggedInUser, loggedInRole, startDate, endDate);
+        }
+
+        function renderDelegationTable(data) {
+            const tbody = document.getElementById('delegationTableBody');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="15" class="text-center">No delegation data found for selected date range</td></tr>';
+                return;
+            }
+
+            // Setup user filter if more than 1 user
+            setupScoreUserFilter(data);
+
+            // Apply user filter and render
+            renderFilteredDelegationTable(data);
+        }
+
+        function setupScoreUserFilter(data) {
+            const userFilterContainer = document.getElementById('scoreUserFilterContainer');
+
+            if (data.length <= 1) {
+                userFilterContainer.style.display = 'none';
+                return;
+            }
+
+            userFilterContainer.style.display = 'block';
+
+            // Get unique users
+            const users = [];
+            const seen = new Set();
+            data.forEach(row => {
+                if (!seen.has(row.userId)) {
+                    seen.add(row.userId);
+                    users.push({ userId: row.userId, name: row.name });
+                }
+            });
+
+            // Check if we need to rebuild the dropdown
+            const existingCheckboxes = document.querySelectorAll('.score-user-checkbox');
+            const existingUserIds = Array.from(existingCheckboxes).map(cb => cb.value);
+            const newUserIds = users.map(u => u.userId);
+
+            // Only rebuild if users have changed
+            if (existingCheckboxes.length !== newUserIds.length ||
+                !existingUserIds.every(id => newUserIds.includes(id))) {
+
+                // Populate user checkboxes
+                const checkboxContainer = document.getElementById('scoreUserCheckboxes');
+                checkboxContainer.innerHTML = '';
+
+                users.forEach(user => {
+                    const div = document.createElement('div');
+                    div.className = 'form-check score-user-option';
+                    div.innerHTML = `
+                    <input class="form-check-input score-user-checkbox" type="checkbox" value="${user.userId}" id="scoreUser_${user.userId.replace(/[^a-zA-Z0-9]/g, '_')}" checked>
+                    <label class="form-check-label" for="scoreUser_${user.userId.replace(/[^a-zA-Z0-9]/g, '_')}">
+                      ${user.name} (${user.userId})
+                    </label>
+                  `;
+                    checkboxContainer.appendChild(div);
+                });
+
+                // Setup search functionality
+                const searchInput = document.getElementById('scoreUserSearch');
+                searchInput.removeEventListener('input', handleScoreUserSearch);
+                searchInput.addEventListener('input', handleScoreUserSearch);
+
+                // Setup checkbox change handlers
+                const checkboxes = document.querySelectorAll('.score-user-checkbox');
+                checkboxes.forEach(checkbox => {
+                    checkbox.removeEventListener('change', handleScoreUserCheckboxChange);
+                    checkbox.addEventListener('change', handleScoreUserCheckboxChange);
+                });
+
+                updateScoreUserFilterDisplay(false);
+            }
+        }
+
+        function handleScoreUserSearch() {
+            const searchTerm = this.value.toLowerCase();
+            const userOptions = document.querySelectorAll('.score-user-option');
+
+            userOptions.forEach(option => {
+                const label = option.querySelector('label').textContent.toLowerCase();
+                option.style.display = label.includes(searchTerm) ? 'block' : 'none';
+            });
+        }
+
+        function handleScoreUserCheckboxChange() {
+            updateScoreUserFilterDisplay(true);
+        }
+
+        function updateScoreUserFilterDisplay(shouldRerender = true) {
+            const checkboxes = document.querySelectorAll('.score-user-checkbox');
+            const checkedBoxes = document.querySelectorAll('.score-user-checkbox:checked');
+            const button = document.getElementById('scoreUserFilterBtn');
+
+            if (checkedBoxes.length === 0) {
+                button.textContent = 'No Users Selected';
+            } else if (checkedBoxes.length === checkboxes.length) {
+                button.textContent = 'All Users';
+            } else if (checkedBoxes.length === 1) {
+                const label = checkedBoxes[0].nextElementSibling.textContent.split(' (')[0];
+                button.textContent = label;
+            } else {
+                button.textContent = `${checkedBoxes.length} Users Selected`;
+            }
+
+            // Only re-render if requested and data exists
+            if (shouldRerender && currentActiveTab === 'delegation' && currentDelegationData && currentDelegationData.length > 0) {
+                renderFilteredDelegationTable(currentDelegationData);
+            } else if (shouldRerender && currentActiveTab === 'mis' && currentMisData && currentMisData.length > 0) {
+                renderFilteredMisTable(currentMisData);
+            }
+        }
+
+        function applyScoreUserFilter(data) {
+            const checkboxes = document.querySelectorAll('.score-user-checkbox:checked');
+
+            if (checkboxes.length === 0) {
+                return data;
+            }
+
+            const selectedUserIds = Array.from(checkboxes).map(cb => cb.value);
+            return data.filter(row => selectedUserIds.includes(row.userId));
+        }
+
+        function selectAllScoreUsers() {
+            const checkboxes = document.querySelectorAll('.score-user-checkbox');
+            checkboxes.forEach(checkbox => checkbox.checked = true);
+            updateScoreUserFilterDisplay(true);
+        }
+
+        function clearAllScoreUsers() {
+            const checkboxes = document.querySelectorAll('.score-user-checkbox');
+            checkboxes.forEach(checkbox => checkbox.checked = false);
+            updateScoreUserFilterDisplay(true);
+        }
+
+        function renderFilteredDelegationTable(data) {
+            const filteredData = applyScoreUserFilter(data);
+            const tbody = document.getElementById('delegationTableBody');
+            tbody.innerHTML = '';
+
+            const loggedInRole = localStorage.getItem('role');
+            const canEdit = (loggedInRole === 'admin');
+
+            filteredData.forEach(function (row) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.userId}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.name}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #ffebee;">${row.currentPlannedRed}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #fff8e1;">${row.currentPlannedYellow}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #e8f5e8;">${row.currentPlannedGreen}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #ffebee;">
+                    <div>${row.currentScoreRedCount || 0}</div>
+                    <div style="font-size: 11px; color: #666;">(${row.currentScoreRed}%)</div>
+                  </td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #fff8e1;">
+                    <div>${row.currentScoreYellowCount || 0}</div>
+                    <div style="font-size: 11px; color: #666;">(${row.currentScoreYellow}%)</div>
+                  </td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #e8f5e8;">
+                    <div>${row.currentScoreGreenCount || 0}</div>
+                    <div style="font-size: 11px; color: #666;">(${row.currentScoreGreen}%)</div>
+                  </td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.totalTasks}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.completedTasks}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.pendingTasks}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.shiftedTasks}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #ffebee;">${row.nextCommittedRed || ''}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #fff8e1;">${row.nextCommittedYellow || ''}</td>
+                  <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #e8f5e8;">${row.nextCommittedGreen || ''}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Delegation saving functionality
+        var hasDelegationUnsavedChanges = false;
+
+        function markDelegationUnsaved() {
+            hasDelegationUnsavedChanges = true;
+            showDelegationSaveButton();
+        }
+
+        function showDelegationSaveButton() {
+            let saveBtn = document.getElementById('saveDelegationBtn');
+            if (!saveBtn) {
+                // Create save button if it doesn't exist
+                const refreshBtn = document.getElementById('refreshScoreBtn');
+                saveBtn = document.createElement('button');
+                saveBtn.id = 'saveDelegationBtn';
+                saveBtn.className = 'btn btn-success ms-2';
+                saveBtn.textContent = 'Save Delegation Changes';
+                saveBtn.onclick = saveDelegationChanges;
+                refreshBtn.parentNode.appendChild(saveBtn);
+            }
+            saveBtn.style.display = 'inline-block';
+        }
+
+        function saveDelegationChanges() {
+            if (!hasDelegationUnsavedChanges) return;
+
+            const startDate = document.getElementById('scoreStartDate').value;
+            const endDate = document.getElementById('scoreEndDate').value;
+            const weekSelect = document.getElementById('scoreWeekNumber');
+            const weekNumber = weekSelect.value || getCurrentWeekNumber(startDate);
+
+            if (!weekNumber) {
+                alert('Please select a valid week number');
+                return;
+            }
+
+            const commitmentInputs = document.querySelectorAll('.delegation-commitment-input:not([disabled])');
+            const commitments = {};
+
+            commitmentInputs.forEach(function (input) {
+                const userId = input.dataset.user;
+                const type = input.dataset.type;
+                const value = input.value ? input.value.trim() : '';
+
+                if (value !== '') {
+                    if (!commitments[userId]) {
+                        commitments[userId] = { red: '', yellow: '', green: '' };
+                    }
+                    commitments[userId][type] = value;
+                }
+            });
+
+            if (Object.keys(commitments).length === 0) {
+                alert('No commitments to save - please enter values before saving');
+                hasDelegationUnsavedChanges = false;
+                document.getElementById('saveDelegationBtn').style.display = 'none';
+                return;
+            }
+
+            // Show loading state
+            const saveBtn = document.getElementById('saveDelegationBtn');
+            const originalText = saveBtn.textContent;
+            saveBtn.textContent = 'Saving...';
+            saveBtn.disabled = true;
+
+            // Save commitments sequentially
+            let saveCount = 0;
+            const totalSaves = Object.keys(commitments).length;
+            let hasError = false;
+
+            function saveNext() {
+                const userIds = Object.keys(commitments);
+                if (saveCount >= totalSaves || hasError) {
+                    saveBtn.textContent = originalText;
+                    saveBtn.disabled = false;
+                    if (!hasError) {
+                        hasDelegationUnsavedChanges = false;
+                        saveBtn.style.display = 'none';
+                        alert('All delegation commitments saved successfully');
+                        loadDelegationData();
+                    }
+                    return;
+                }
+
+                const userId = userIds[saveCount];
+                const redCommitment = commitments[userId].red || '';
+                const yellowCommitment = commitments[userId].yellow || '';
+                const greenCommitment = commitments[userId].green || '';
+
+                google.script.run
+                    .withSuccessHandler(function () {
+                        saveCount++;
+                        saveNext();
+                    })
+                    .withFailureHandler(function (error) {
+                        hasError = true;
+                        saveBtn.textContent = originalText;
+                        saveBtn.disabled = false;
+                        alert('Error saving delegation commitments: ' + error);
+                    })
+                    .saveDelegationWorkCommitments(userId, weekNumber, startDate, endDate, redCommitment, yellowCommitment, greenCommitment);
+            }
+
+            saveNext();
+        }
+
+        function getCurrentWeekNumber(dateStr) {
+            if (!dateStr) return null;
+
+            // Try to use the same logic as the backend getWeekNumber function
+            const date = new Date(dateStr);
+
+            // Check if there are available weeks in the dropdown first
+            const weekSelect = document.getElementById('scoreWeekNumber');
+            if (weekSelect) {
+                const options = weekSelect.querySelectorAll('option');
+
+                for (let option of options) {
+                    if (option.dataset.startDate === dateStr) {
+                        return parseInt(option.value);
+                    }
+                }
+            }
+
+            // Fallback to calculation
+            const startOfYear = new Date(date.getFullYear(), 0, 1);
+            const diffInTime = date.getTime() - startOfYear.getTime();
+            const diffInDays = Math.ceil(diffInTime / (1000 * 3600 * 24));
+            return Math.ceil(diffInDays / 7);
+        }
+
+    </script>
+</body>
+
+</html>
