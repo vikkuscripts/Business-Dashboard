@@ -1,1845 +1,1667 @@
-<!DOCTYPE html>
-<html>
+<style>
+    :root {
+        --primary-color: #1A7499;
+        --card-shadow: 0 6px 18px rgba(16, 24, 40, 0.08);
+    }
 
-<head>
-    <base target="_top">
-    <!-- Bootstrap CSS (CDN) -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" />
-    <!-- Google Material Symbols (Variable Icon Font) -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
-    <style>
-        :root {
-            --primary-color: #1A7499;
-            --card-shadow: 0 6px 18px rgba(16, 24, 40, 0.08);
+    #misContainer {
+        margin-top: 24px;
+        padding: 20px;
+    }
+
+    .mis-table-container {
+        max-height: calc(100vh - 220px);
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 12px;
+        box-shadow: var(--card-shadow);
+        position: relative;
+    }
+
+    .mis-table {
+        width: 100%;
+        margin-bottom: 0;
+    }
+
+    .mis-table thead th {
+        background-color: var(--primary-color, #1A7499) !important;
+        color: white !important;
+        font-weight: bold;
+        position: sticky !important;
+        z-index: 100 !important;
+        border: 1px solid #dee2e6;
+        padding: 10px;
+        text-align: center;
+        top: 0 !important;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Multi-row header normalization */
+    .mis-table thead tr:nth-child(2) th {
+        top: 41px !important;
+        /* Matches height of first row approx */
+        z-index: 99 !important;
+    }
+
+    .mis-table td {
+        border: 1px solid #dee2e6;
+        padding: 8px;
+        text-align: center;
+        vertical-align: middle;
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+    }
+
+    /* Ensure containers allow sticky */
+    .mis-table-container {
+        max-height: calc(100vh - 250px) !important;
+        overflow: auto !important;
+        position: relative !important;
+        transform: none !important;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        background: white;
+    }
+
+    .section-header {
+        background-color: #2c5f8a !important;
+        color: white;
+        font-weight: bold;
+        text-align: center;
+    }
+
+    /* Rest of your existing CSS remains the same */
+    .commitment-input {
+        width: 80px;
+        text-align: center;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        padding: 4px;
+    }
+
+    .view-btn {
+        background-color: var(--primary-color, #1A7499);
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+
+    .view-btn:hover {
+        filter: brightness(0.95);
+    }
+
+    .save-btn {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        display: none;
+    }
+
+    .save-btn:hover {
+        background-color: #218838;
+    }
+
+    .filter-section {
+        background: #fff;
+        padding: 15px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        border: 1px solid #e5e7eb;
+        box-shadow: var(--card-shadow);
+    }
+
+    .week-dropdown {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.8);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+
+    .loading-spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid var(--primary-color, #1A7499);
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
         }
 
-        #paramContainer {
-            margin-top: 24px;
+        100% {
+            transform: rotate(360deg);
         }
+    }
 
-        #paramContainer th {
-            cursor: pointer;
-            /* Indicate clickable headers for sorting */
-        }
+    .page-loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+    }
 
-        /* Make table header more prominent */
-        #paramContainer thead th {
-            background-color: var(--primary-color, #1A7499) !important;
-            color: white;
-            font-weight: bold;
-        }
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+    }
 
-        /* Give table a 3D shadow effect */
-        #paramContainer .shadow {
-            box-shadow: var(--card-shadow) !important;
-        }
+    .modal-content {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        width: 90%;
+        max-width: 1000px;
+        max-height: 80vh;
+        overflow-y: auto;
+        position: relative;
+    }
 
-        /* Container with less horizontal margin */
-        #paramContainer .custom-container {
-            max-width: 90%;
-            margin: 0 auto;
-        }
+    .modal-header {
+        border-bottom: 2px solid #dee2e6;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
 
-        /* Material Symbols configuration */
-        #paramContainer .material-symbols-outlined {
-            font-variation-settings:
-                'FILL' 0,
-                'wght' 400,
-                'GRAD' 0,
-                'opsz' 24;
-        }
+    .close-modal {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        font-size: 24px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #777;
+    }
 
-        /* Searchable dropdown styles */
-        #paramContainer .autocomplete-wrapper {
-            position: relative;
-        }
+    .close-modal:hover {
+        color: #333;
+    }
 
-        #paramContainer .autocomplete-suggestions {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            z-index: 9999;
-            width: 100%;
-            max-height: 200px;
-            overflow-y: auto;
-            display: none;
-            /* hidden by default */
-        }
+    .process-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
 
-        .autocomplete-suggestions .list-group-item {
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+    .process-table th {
+        background-color: var(--primary-color, #1A7499);
+        color: white;
+        padding: 10px;
+        border: 1px solid #dee2e6;
+    }
 
-        .autocomplete-suggestions .list-group-item:hover {
-            background-color: #e7e7e7;
-        }
+    .process-table td {
+        padding: 8px;
+        border: 1px solid #dee2e6;
+        text-align: center;
+    }
 
-        h1 {
-            font-size: 25px;
-            margin-top: 10px;
-        }
+    #delegationTableLoadingOverlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.8);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
 
-        /* Apply a visible border and border-radius to all form-control inputs in the param container */
-        #paramContainer input.form-control {
-            border: 2px solid #000000;
-            border-radius: 0.25rem;
-        }
+    .delegation-page-input {
+        width: 70px;
+        text-align: center;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        padding: 4px;
+    }
 
-        #resetBtn {
-            background-color: #F47174;
-            color: white;
-        }
+    .delegation-page-input:disabled {
+        background-color: #f8f9fa;
+        color: #6c757d;
+    }
 
-        /* Custom styling for dynamically created buttons */
-        .custom-btn {
-            height: 38px;
-            /* Adjust as needed */
-            margin-left: 5px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.7);
-            transition: box-shadow 0.2s ease, transform 0.2s ease;
-        }
+    .nav-tabs .nav-link {
+        color: #1A7499;
+        font-weight: bold;
+    }
 
-        .custom-btn:hover {
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-        }
+    .nav-tabs .nav-link.active {
+        background-color: #1A7499;
+        color: white;
+        border-color: #1A7499;
+    }
 
-        .custom-btn:active {
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            transform: translateY(2px);
-        }
+    .nav-tabs .nav-link:hover {
+        border-color: #1A7499;
+        color: #1A7499;
+    }
 
-        /* NEW: Styles for metric boxes in the metrics container */
-        #metricContainer .metric-box {
-            background-color: #E3F2FD;
-            /* A light blue; adjust as needed for your theme */
-            border: 1px solid #90CAF9;
-            /* Subtle border */
-            border-radius: 12px;
-            /* Larger curves for a boxy look */
-            padding: 10px 15px;
-            margin: 5px;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 14px;
-            color: #0D47A1;
-            /* Text color that goes well with the background */
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            /* 3D shadow effect */
-        }
-
-        .table-container {
-            max-height: calc(100vh - 220px);
-            /* Maximum height, not fixed height */
-            min-height: auto;
-            /* Allow the container to shrink to content */
-        }
-
-        #dataTable thead th {
-            position: sticky !important;
-            top: 0 !important;
-            background-color: #1A7499 !important;
-            color: white !important;
-            z-index: 999 !important;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-        }
-
-        #dataTable td {
-            white-space: normal !important;
-            word-wrap: break-word !important;
-            overflow-wrap: break-word !important;
-            word-break: break-word !important;
-        }
-
-        /* Ensure parent containers allow sticky headers */
-        .table-container {
-            max-height: calc(100vh - 250px) !important;
-            overflow: auto !important;
-            position: relative !important;
-            transform: none !important;
-        }
-
-        /* Eye icon column styling */
-        .view-icon-cell {
-            width: 50px;
-            text-align: center;
-            cursor: pointer;
-        }
-
-        .view-icon {
-            color: #1A7499;
-            transition: color 0.2s;
-        }
-
-        .view-icon:hover {
-            color: #0D47A1;
-        }
-
-        /* Card styling */
-        .detail-card-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .detail-card-overlay.show {
-            opacity: 1;
-            display: flex;
-        }
-
-        .detail-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: var(--card-shadow);
-            width: 90%;
-            max-width: 900px;
-            max-height: 80vh;
-            padding: 20px;
-            overflow-y: auto;
-            position: relative;
-            transform: translateY(-30px);
-            opacity: 0;
-            transition: transform 0.3s ease, opacity 0.3s ease;
-        }
-
-        .detail-card.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-
-        .detail-card-title {
-            text-align: center;
-            margin-bottom: 20px;
-            font-weight: 800;
-            color: var(--primary-color, #1A7499);
-            padding-bottom: 10px;
-            border-bottom: 2px solid #eee;
-        }
-
-        .detail-card-content {
-            width: 100%;
-        }
-
-        .detail-section {
-            display: flex;
-            flex-wrap: wrap;
-            width: 100%;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid black;
-            gap: 20px;
-        }
-
-        .detail-field {
-            width: calc(50% - 10px);
-            margin-bottom: 8px;
-        }
-
-        .detail-label {
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 8px;
-            display: block;
-            font-size: 0.95rem;
-        }
-
-        .detail-value {
-            word-break: break-word;
-            background-color: #f5f5f5;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 8px 12px;
-            min-height: 38px;
-            display: block;
-            width: 100%;
-            font-size: 0.9rem;
-            color: #333;
-            box-sizing: border-box;
-        }
-
-        .detail-table-section {
-            width: 100%;
-            margin-top: 30px;
-            /* border-top: 1px solid #eee; */
-            padding-top: 20px;
-        }
-
-        .detail-table-section table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 0;
-            border: 1px solid #dee2e6;
-        }
-
-        .detail-table-section th {
-            background-color: var(--primary-color, #1A7499) !important;
-            color: white;
-            position: sticky;
-            top: 0;
-            z-index: 1;
-            padding: 10px;
-            border: 1px solid #dee2e6;
-            white-space: nowrap;
-            font-weight: bold;
-        }
-
-        .detail-table-section td {
-            padding: 10px;
-            border: 1px solid #dee2e6;
-            white-space: nowrap;
-            background-color: #f5f5f5;
-        }
-
-        .close-card {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 24px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: #777;
-        }
-
-        .close-card:hover {
-            color: #333;
-        }
-
-        /* Table wrapper for scrolling */
-        .table-wrapper {
-            width: 100%;
-            max-height: 200px;
-            overflow-y: auto;
-            overflow-x: auto;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            margin-top: 5px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-
-        @media (max-width: 768px) {
-            .detail-field {
-                width: 100%;
-            }
-        }
-
-        /* Resizable columns */
-        #paramContainer .table-container {
-            overflow-x: auto;
-            /* Enable horizontal scrolling */
-        }
-
-        #dataTable {
-            table-layout: fixed;
-            /* Important for column resizing */
-        }
-
-        #dataTable th {
-            position: relative;
-            white-space: normal;
-            /* Allow text to wrap */
-            word-wrap: break-word;
-        }
-
-        #dataTable td {
-            white-space: normal;
-            /* Allow text to wrap */
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-        }
-
-        .resizer {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 5px;
-            cursor: col-resize;
-            user-select: none;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.1);
-        }
-
-        .resizer:hover,
-        .resizing {
-            background-color: rgba(0, 0, 0, 0.3);
-        }
-
-        .resizing {
-            cursor: col-resize !important;
-        }
-
-        tbody tr {
-            background-color: #fff;
-            font-weight: 400;
-        }
-    </style>
+    .tab-content {
+        margin-top: 20px;
+    }
+</style>
 </head>
 
 <body>
-    <div id="paramContainer">
-        <div class="custom-container my-4">
-            <!-- 1) Title ... -->
-            <div class="d-flex align-items-center justify-content-center position-relative">
-                <h1 class="fw-bold" id="pageTitle">
-                    <?!= pageTitle ?>
-                </h1>
-            </div>
-            <hr style="height: 3px; background-color: #000; border: none;" />
-            <!-- 2) Sticky filter bar ... -->
-            <div id="filterBar" style="position: sticky; top: 0; z-index: 999; background: #fff; padding: 10px;">
-                <div class="row" id="filters"></div>
-                <!-- Add a row that places Reset on the left, custom buttons on the right -->
-                <div class="d-flex justify-content-between mb-3">
-                    <div class="d-flex gap-2">
-                        <button id="resetBtn" class="btn btn-secondary mb-3">Reset Filters</button>
-                        <button id="refreshBtn" class="btn btn-primary mb-3"
-                            style="background-color: green; border-color: black;">
-                            <i class="material-symbols-outlined"
-                                style="vertical-align: middle; font-size: 18px;">refresh</i> Refresh
-                        </button>
-                        <span id="lastRefreshedText" class="align-self-center ms-2 text-muted"
-                            style="padding-bottom: 17px">Refreshed now</span>
-                    </div>
-                    <!-- We'll populate custom buttons here -->
-                    <div id="customButtonsContainer" class="d-flex gap-2"></div>
+    <div id="pageLoadingOverlay" class="page-loading">
+        <div class="loading-spinner"></div>
+    </div>
+    <div id="misContainer">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <h2 class="text-center mb-4" style="color: #1A7499; font-weight: bold;">Score Management</h2>
+                    <hr style="height: 3px; background-color: #1A7499; border: none;" />
                 </div>
             </div>
-            <!-- NEW: Metrics Container (positioned between filter bar and table) -->
-            <div id="metricContainer" class="container my-3" style="padding-left: 0; margin-left: 0;"></div>
-            <!-- 3) Table container ... -->
-            <div class="shadow table-container" style="overflow: auto; margin-top: 1rem;">
-                <table class="table table-striped table-bordered table-hover" id="dataTable">
-                    <thead>
-                        <tr id="tableHeader" style="position: sticky; top: 0px; z-index: 9;"></tr>
-                    </thead>
-                    <tbody id="tableBody"></tbody>
-                </table>
+            <!-- Tab Navigation -->
+            <div class="row">
+                <div class="col-12">
+                    <ul class="nav nav-tabs mb-3" id="misPageTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="mis-page-tab" data-bs-toggle="tab"
+                                data-bs-target="#mis-page-tab-pane" type="button" role="tab"
+                                aria-controls="mis-page-tab-pane" aria-selected="true"
+                                onclick="switchMisPageTab('mis')">MIS Score</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="delegation-page-tab" data-bs-toggle="tab"
+                                data-bs-target="#delegation-page-tab-pane" type="button" role="tab"
+                                aria-controls="delegation-page-tab-pane" aria-selected="false"
+                                onclick="switchMisPageTab('delegation')">Delegation</button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <!-- Common Filters -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="filter-section">
+                        <div class="row align-items-end">
+                            <div class="col-md-2">
+                                <label for="startDate" class="form-label">Start Date:</label>
+                                <input type="date" id="startDate" class="form-control">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="endDate" class="form-label">End Date:</label>
+                                <input type="date" id="endDate" class="form-control" readonly>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="weekNumber" class="form-label">Week Number:</label>
+                                <select id="weekNumber" class="form-select week-dropdown">
+                                    <option value="">Loading weeks...</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2" id="userFilterContainer" style="display: none;">
+                                <label for="userFilter" class="form-label">Users:</label>
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button"
+                                        id="userFilterBtn" data-bs-toggle="dropdown" aria-expanded="false"
+                                        style="text-align: left; font-size: 12px;">
+                                        All Users
+                                    </button>
+                                    <div class="dropdown-menu w-100 p-2" aria-labelledby="userFilterBtn"
+                                        id="userDropdown" style="max-height: 300px; overflow-y: auto;">
+                                        <input type="text" class="form-control mb-2" id="userSearch"
+                                            placeholder="Search users..." style="font-size: 12px;">
+                                        <div id="userCheckboxes">
+                                            <!-- User checkboxes will be populated here -->
+                                        </div>
+                                        <hr class="my-2">
+                                        <button type="button" class="btn btn-sm btn-outline-primary me-1"
+                                            onclick="selectAllUsers()" style="font-size: 10px;">Select All</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                            onclick="clearAllUsers()" style="font-size: 10px;">Clear All</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">&nbsp;</label> <!-- Empty label for alignment -->
+                                <div class="d-flex gap-2">
+                                    <button id="saveBtn" class="save-btn">Save Changes</button>
+                                    <button id="resetMisPageBtn" class="btn btn-secondary"
+                                        style="background-color: #6c757d; border-color: #6c757d;">Reset</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Tab Content -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="tab-content" id="misPageTabContent">
+                        <!-- MIS Score Tab -->
+                        <div class="tab-pane fade show active" id="mis-page-tab-pane" role="tabpanel"
+                            aria-labelledby="mis-page-tab">
+                            <div class="mis-table-container">
+                                <div id="tableLoadingOverlay" class="loading-overlay">
+                                    <div class="loading-spinner"></div>
+                                </div>
+                                <table class="table table-bordered mis-table">
+                                    <thead>
+                                        <tr>
+                                            <th rowspan="2" style="vertical-align: middle;">User ID</th>
+                                            <th rowspan="2" style="vertical-align: middle;">Name</th>
+                                            <th colspan="5" class="section-header">Work Not Done</th>
+                                            <th colspan="5" class="section-header">Work Done on Time</th>
+                                            <th rowspan="2" style="vertical-align: middle;">Action</th>
+                                        </tr>
+                                        <tr>
+                                            <th style="vertical-align: middle; text-align: center;">Current Week
+                                                <br>Score(WND)
+                                            </th>
+                                            <th style="vertical-align: middle; text-align: center;">Total Task</th>
+                                            <th style="vertical-align: middle; text-align: center;">Total Completed
+                                                <br>Task
+                                            </th>
+                                            <th style="vertical-align: middle; text-align: center;">Score</th>
+                                            <th style="vertical-align: middle; text-align: center;">Next
+                                                Commitment<br>(Work not done)</th>
+                                            <th style="vertical-align: middle; text-align: center;">Current
+                                                Week<br>Score(WND-OT)</th>
+                                            <th style="vertical-align: middle; text-align: center;">Total
+                                                Complete<br>Task</th>
+                                            <th style="vertical-align: middle; text-align: center;">On Time Done<br>Task
+                                            </th>
+                                            <th style="vertical-align: middle; text-align: center;">Score</th>
+                                            <th style="vertical-align: middle; text-align: center;">Next
+                                                Commitment<br>(Work Done on Time)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="misTableBody">
+                                        <tr>
+                                            <td colspan="12" class="text-center">Loading...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <!-- Delegation Tab -->
+                        <div class="tab-pane fade" id="delegation-page-tab-pane" role="tabpanel"
+                            aria-labelledby="delegation-page-tab">
+                            <div class="mis-table-container">
+                                <div id="delegationTableLoadingOverlay" class="loading-overlay">
+                                    <div class="loading-spinner"></div>
+                                </div>
+                                <table class="table table-bordered mis-table">
+                                    <thead>
+                                        <tr>
+                                            <th rowspan="2" style="vertical-align: middle;">Email</th>
+                                            <th rowspan="2" style="vertical-align: middle;">Name</th>
+                                            <th colspan="3" class="section-header">Current Planned</th>
+                                            <th colspan="3" class="section-header">Current Score</th>
+                                            <th colspan="4" class="section-header">Total Task Details</th>
+                                            <th colspan="3" class="section-header">Next Committed</th>
+                                        </tr>
+                                        <tr>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #dc3545 !important; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Red Score</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #ffc107 !important; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Yellow Score</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #28a745 !important; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Green Score</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #dc3545 !important; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Red Score</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #ffc107 !important; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Yellow Score</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #28a745 !important; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Green Score</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #1A7499; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Total Task</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #1A7499; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Completed Task</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #1A7499; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Pending Task</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #1A7499; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Shifted Task</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #dc3545 !important; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Red Score</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #ffc107 !important; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Yellow Score</th>
+                                            <th
+                                                style="position: sticky; top: 40px; vertical-align: middle; text-align: center; background-color: #28a745 !important; color: white; z-index: 11; border: 1px solid #dee2e6;">
+                                                Green Score</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="delegationPageTableBody">
+                                        <tr>
+                                            <td colspan="15" class="text-center">Loading...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <div id="detailCardOverlay" class="detail-card-overlay">
-        <div id="detailCard" class="detail-card">
-            <button id="closeCard" class="close-card">&times;</button>
-            <h3 id="detailCardTitle" class="detail-card-title">
-                <?!= pageTitle ?> Record Details
-            </h3>
-            <div id="detailCardContent" class="detail-card-content">
-                <!-- Content will be populated dynamically -->
+    <div id="processModal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeProcessModal()">&times;</button>
+            <div class="modal-header">
+                <h4 id="modalTitle">Process Details</h4>
+                <p id="modalSubtitle" class="text-muted mb-0"></p>
+            </div>
+            <div id="processTableContainer">
+                <!-- Process table will be populated here -->
             </div>
         </div>
     </div>
     <script>
-        // These variables come from Code.gs
-        var columnIdentifiers = <?!= JSON.stringify(columnIdentifiers) ?>;
-        var filterTypesRaw = <?!= JSON.stringify(filterTypes) ?>;
-        var headers = <?!= JSON.stringify(headers) ?>;
-        var rawData = <?!= JSON.stringify(filteredData) ?>;
-        var timeZone = <?!= JSON.stringify(timeZone) ?>;
-        var buttons = <?!= JSON.stringify(buttons) ?>;
-        var entryViewable = <?!= JSON.stringify(entryViewable) ?>;
+        var userName = <?!= JSON.stringify(userName) ?>;
+        var userRole = <?!= JSON.stringify(role) ?>;
+        var currentMisData = [];
+        var hasUnsavedChanges = false;
+        var isInitialized = false;
 
-        // NEW: Logic data for cell coloring
-        var logicData = <?!= JSON.stringify(logicData) ?>;
-        var logicColumnNames = <?!= JSON.stringify(logicColumnNames) ?>;
+        // Global initialization function that will be called from main.html
+        window.initializeMISPage = function () {
+            if (isInitialized) return;
+            isInitialized = true;
 
-        var lastRefreshTime = new Date();
-        var refreshTimer = null;
-        var currentAccessType = <?!= JSON.stringify(accessType || "") ?>;
-        var currentPageParams = {
-            sheetName: <?!= JSON.stringify(sheetName) ?>,
-            externalId: <?!= JSON.stringify(externalId) ?>,
-            pageTitle: <?!= JSON.stringify(pageTitle) ?>,
-            rangeSpec: <?!= JSON.stringify(rangeSpec) ?>,
-            userName: <?!= JSON.stringify(userName) ?>,
-            role: <?!= JSON.stringify(role) ?>,
+            console.log('Initializing MIS Page...');
+            showPageLoading();
+            setupEventListeners();
+
+            // Add a small delay to ensure Google Apps Script context is ready
+            setTimeout(function () {
+                loadAvailableWeeks();
+            }, 250);
         };
 
-        // "data" holds the full unfiltered dataset from row 4 onwards
-        var data = rawData.slice();
-        // We'll store the filtered subset here
-        var filteredData = data.slice();
+        // Add these variables at the top of the script section
+        var currentMisPageTab = 'mis';
+        var currentDelegationPageData = [];
+        var hasDelegationPageUnsavedChanges = false;
 
-        // Instead of a single string per column, parse the row-2 cell into an array of tokens
-        // e.g. if row-2 cell = "Search,Count,Max,Hidden" then filterTypes[i] = ["Search","Count","Max","Hidden"]
-        var filterTypes = [];  // [CHANGED LINE: new array to hold arrays of tokens]
-
-        // Convert your filterTypesRaw (which is e.g. ["Search","DateRange","Hidden",...]) into arrays
-        for (var i = 0; i < filterTypesRaw.length; i++) {
-            var cell = filterTypesRaw[i] || "";
-            // Split by comma and trim
-            var tokens = cell.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
-            filterTypes.push(tokens);
-        }
-
-        // Holds objects describing each column's filter UI
-        var filterControls = [];
-
-        // Toggle to keep track of ascending/descending sorts
-        var sortAsc = true;
-
-        // Column width storage - persists during page interactions
-        var columnWidths = [];
-
-        // Initialize resizing
-        function initResize(e) {
-            e.preventDefault();
-
-            // Get current header and its index
-            var header = e.target.parentElement;
-            var headerIndex = Array.from(header.parentElement.children).indexOf(header);
-            var table = document.getElementById('dataTable');
-            var startX = e.pageX;
-            var startWidth = header.offsetWidth;
-
-            // Minimum width constraint - change minimum width
-            var minWidth = 100;
-
-            // Add resizing class to indicate active resize
-            document.body.classList.add('resizing');
-            header.classList.add('resizing');
-
-            // Add mousemove and mouseup event listeners
-            document.addEventListener('mousemove', resize);
-            document.addEventListener('mouseup', stopResize);
-
-            // Resize function - calculates new width and updates
-            function resize(e) {
-                var newWidth = Math.max(startWidth + (e.pageX - startX), minWidth);
-
-                // Update the width of the header
-                header.style.width = newWidth + 'px';
-
-                // Update all cells in this column
-                var cells = table.querySelectorAll(`tr td:nth-child(${headerIndex + 1})`);
-                cells.forEach(cell => {
-                    cell.style.width = newWidth + 'px';
-                });
-
-                // Store the width in our array for persistence
-                columnWidths[headerIndex] = newWidth;
-            }
-
-            // Stop resizing
-            function stopResize() {
-                document.body.classList.remove('resizing');
-                header.classList.remove('resizing');
-                document.removeEventListener('mousemove', resize);
-                document.removeEventListener('mouseup', stopResize);
+        // Make the function globally available
+        function switchMisPageTab(tabName) {
+            console.log('Switching to tab:', tabName);
+            currentMisPageTab = tabName;
+            if (tabName === 'mis') {
+                loadMisData();
+            } else if (tabName === 'delegation') {
+                loadDelegationPageData();
             }
         }
 
-        // Apply stored column widths after table updates
-        function applyColumnWidths() {
-            var table = document.getElementById('dataTable');
-            var headers = table.querySelectorAll('th');
+        // Make it globally available
+        window.switchMisPageTab = switchMisPageTab;
 
-            headers.forEach((header, index) => {
-                if (columnWidths[index]) {
-                    header.style.width = columnWidths[index] + 'px';
+        function loadDelegationPageData() {
+            console.log('Loading delegation page data...');
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
 
-                    // Also update all cells in this column
-                    var cells = table.querySelectorAll(`tr td:nth-child(${index + 1})`);
-                    cells.forEach(cell => {
-                        cell.style.width = columnWidths[index] + 'px';
-                    });
+            if (!startDate || !endDate) {
+                const tbody = document.getElementById('delegationPageTableBody');
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="15" class="text-center">Please select a date range to view delegation data</td></tr>';
                 }
-            });
-        }
-
-        // -----------------------------------------------------------
-        // 1) Initialize the page
-        // -----------------------------------------------------------
-        function initParamPage() {
-            buildFilterUI();
-            buildTableHeader();
-            renderTable(filteredData);
-
-            // Initialize column widths on first load
-            setTimeout(function () {
-                // Get the table headers
-                var headers = document.querySelectorAll('#dataTable th');
-
-                // Store the initial width of each column
-                headers.forEach((header, index) => {
-                    columnWidths[index] = Math.max(header.offsetWidth, 100); // Ensure minimum width - change minimum width
-                });
-
-                // Apply the initial widths
-                applyColumnWidths();
-            }, 200); // Give a slight delay to ensure the table is fully rendered
-
-            renderCustomButtons();
-            renderMetricBoxes();  // Render the metric boxes on initialization
-
-            // Set up refresh button and timer
-            document.getElementById('refreshBtn').addEventListener('click', refreshData);
-            startRefreshTimer();
-            updateLastRefreshedText();
-
-            // Add this line to calculate table height
-            adjustTableHeight();
-
-            // If you also had some `document.addEventListener('click', ...)` code, keep it here:
-            document.addEventListener('click', function (e) {
-                for (var i = 0; i < filterControls.length; i++) {
-                    var fObj = filterControls[i];
-                    if (!fObj || fObj.type !== 'SearchFilter') continue;
-                    if (fObj.wrapper && !fObj.wrapper.contains(e.target)) {
-                        closeDropdown(i);
-                    }
-                }
-            });
-        }
-
-        // -----------------------------------------------------------
-        // 2) Build the dynamic filter UI
-        // -----------------------------------------------------------
-        function buildFilterUI() {
-            var filtersContainer = document.getElementById('filters');
-            filtersContainer.innerHTML = '';
-
-            for (var i = 0; i < columnIdentifiers.length; i++) {
-                var tokenArr = filterTypes[i]; // e.g. ["Search","Hidden","Count"]
-                if (!tokenArr || tokenArr.length === 0) {
-                    filterControls[i] = null;
-                    continue;
-                }
-
-                // Check if the column is 'Hidden' but ALSO can have filters. We'll handle that carefully:
-                // We do want to build a filter if there's e.g. "Search" or "DateRange" or "SearchFilter"
-                // even if 'Hidden' is also included.
-                var hasHidden = tokenArr.includes('Hidden');
-                var hasSearch = tokenArr.includes('Search');
-                var hasSearchFilter = tokenArr.includes('SearchFilter');
-                var hasDateRange = tokenArr.includes('DateRange');
-
-                // If we have none of these relevant UI filters, skip building UI
-                if (!hasSearch && !hasSearchFilter && !hasDateRange) {
-                    filterControls[i] = null;
-                    continue;
-                }
-
-                // Build a container in the filter bar
-                var colDiv = document.createElement('div');
-                colDiv.className = 'col-md-3 mb-3';
-
-                var label = document.createElement('label');
-                label.className = 'form-label';
-                label.textContent = headers[i];
-                colDiv.appendChild(label);
-
-                // "Search" -> standard input
-                if (hasSearch) {
-                    var input = document.createElement('input');
-                    input.type = 'text';
-                    input.className = 'form-control';
-                    input.placeholder = 'Type to search...';
-                    input.addEventListener('input', onFilterChange);
-                    colDiv.appendChild(input);
-
-                    filterControls[i] = {
-                        type: 'Search',
-                        control: input
-                    };
-                }
-
-                // "SearchFilter" -> auto‐complete filter
-                if (hasSearchFilter) {
-                    // If we *also* have "Search" on the same column, we might want to only do one or the other.
-                    // But let's allow them if you want. Or skip "SearchFilter" if "Search" is present.
-                    // For this example, I'll show them as separate—so you can choose.
-                    // (But realistically you'd pick one approach or the other.)
-                    var wrapper = document.createElement('div');
-                    wrapper.className = 'autocomplete-wrapper';
-
-                    var inputSF = document.createElement('input');
-                    inputSF.type = 'text';
-                    inputSF.className = 'form-control';
-                    inputSF.placeholder = 'Click to choose...';
-                    wrapper.appendChild(inputSF);
-
-                    var suggestionsDiv = document.createElement('div');
-                    suggestionsDiv.className = 'autocomplete-suggestions list-group';
-                    wrapper.appendChild(suggestionsDiv);
-
-                    colDiv.appendChild(wrapper);
-
-                    // Compute full unique values from the entire dataset for this column.
-                    var uniqueMap = {};
-                    for (var r = 0; r < data.length; r++) {
-                        var val = data[r][i];
-                        if (val !== '') {
-                            uniqueMap[val] = true;
-                        }
-                    }
-                    var fullUniqueVals = Object.keys(uniqueMap).sort();
-
-                    filterControls[i] = {
-                        type: 'SearchFilter',
-                        control: inputSF,
-                        suggestionsContainer: suggestionsDiv,
-                        fullUniqueVals: fullUniqueVals,
-                        selectedValue: '',
-                        wrapper: wrapper
-                    };
-
-                    (function (index) {
-                        inputSF.addEventListener('focus', function () {
-                            // Clear any previous selection and text.
-                            this.value = "";
-                            filterControls[index].selectedValue = "";
-                            openDropdown(index);
-                        });
-                        inputSF.addEventListener('click', function (e) {
-                            if (filterControls[index].suggestionsContainer.style.display !== 'block') {
-                                openDropdown(index);
-                            }
-                            e.stopPropagation();
-                        });
-                        inputSF.addEventListener('input', function () {
-                            filterControls[index].selectedValue = "";
-                            if (filterControls[index].suggestionsContainer.style.display !== 'block') {
-                                openDropdown(index);
-                            }
-                            updateAutocompleteSuggestions(index, this.value);
-                        });
-                        inputSF.addEventListener('blur', function () {
-                            setTimeout(function () {
-                                if (!filterControls[index].selectedValue) {
-                                    filterControls[index].control.value = "";
-                                }
-                                closeDropdown(index);
-                            }, 200);
-                        });
-                    })(i);
-                }
-
-                // "DateRange"
-                if (hasDateRange) {
-                    // If we *also* have "Search" or "SearchFilter", we *could* show them all. Or skip. Up to you!
-                    // For the example, let's add a date range row below what we have so far:
-                    var rowDiv = document.createElement('div');
-                    rowDiv.className = 'd-flex justify-content-between align-items-center mt-2';
-
-                    var startInput = document.createElement('input');
-                    startInput.type = 'date';
-                    startInput.className = 'form-control';
-                    startInput.style.width = '47.5%';
-                    startInput.addEventListener('change', onFilterChange);
-
-                    var endInput = document.createElement('input');
-                    endInput.type = 'date';
-                    endInput.className = 'form-control';
-                    endInput.style.width = '47.5%';
-                    endInput.addEventListener('change', onFilterChange);
-
-                    rowDiv.appendChild(startInput);
-                    rowDiv.appendChild(endInput);
-                    colDiv.appendChild(rowDiv);
-
-                    // We'll store them in the same filterControls object.  
-                    // CAREFUL: If we already set filterControls[i] to "Search" or "SearchFilter," 
-                    // we need to combine them. Let's do that by an array of sub‐objects or just store 
-                    // them in the same fObj. For simplicity, let's store them together:
-                    if (!filterControls[i]) {
-                        filterControls[i] = { type: 'DateRange', start: startInput, end: endInput };
-                    } else {
-                        // We already have something. We'll store them as subfields.
-                        filterControls[i].dateRange = {
-                            start: startInput,
-                            end: endInput
-                        };
-                    }
-                }
-
-                filtersContainer.appendChild(colDiv);
-            }
-
-            // Hook up reset button
-            document.getElementById('resetBtn').addEventListener('click', resetFilters);
-            updateSearchFilterDropdowns();
-        }
-
-        // -----------------------------------------------------------
-        // 3) Build the Table Header
-        // -----------------------------------------------------------
-        function buildTableHeader() {
-            var theadRow = document.getElementById('tableHeader');
-            theadRow.innerHTML = '';
-
-            // Add view column if entryViewable is not empty
-            if (entryViewable) {
-                var thView = document.createElement('th');
-                thView.className = 'view-icon-cell';
-                thView.textContent = 'View';
-
-                // Add resize handle to the view column header
-                var viewResizer = document.createElement('div');
-                viewResizer.className = 'resizer';
-                viewResizer.addEventListener('mousedown', initResize);
-                thView.appendChild(viewResizer);
-
-                theadRow.appendChild(thView);
-            }
-
-            var visibleIndex = 0;
-            for (var i = 0; i < columnIdentifiers.length; i++) {
-                var tokenArr = filterTypes[i];
-                // If this column includes 'Hidden', we skip from display
-                var isHidden = (tokenArr && tokenArr.includes('Hidden'));
-                if (isHidden) continue;
-
-                var th = document.createElement('th');
-                th.textContent = headers[i];
-                (function (visIndex, colIndex) {
-                    th.addEventListener('click', function () {
-                        sortTable(visIndex, colIndex);
-                    });
-                })(visibleIndex, i);
-
-                // Add resize handle to each column header
-                var resizer = document.createElement('div');
-                resizer.className = 'resizer';
-                resizer.addEventListener('mousedown', initResize);
-                th.appendChild(resizer);
-
-                theadRow.appendChild(th);
-                visibleIndex++;
-            }
-
-            // Add Access Type column if role is user
-            if (currentPageParams.role && currentPageParams.role.toLowerCase() === 'user') {
-                var thAccess = document.createElement('th');
-                thAccess.textContent = 'Access Type';
-
-                var accessResizer = document.createElement('div');
-                accessResizer.className = 'resizer';
-                accessResizer.addEventListener('mousedown', initResize);
-                thAccess.appendChild(accessResizer);
-
-                theadRow.appendChild(thAccess);
-            }
-        }
-
-        // -----------------------------------------------------------
-        // 4) Rendering the Table Rows
-        // -----------------------------------------------------------
-        function renderTable(dataArray) {
-            var tbody = document.getElementById('tableBody');
-            tbody.innerHTML = '';
-
-            // Figure out how many columns are actually displayed
-            var displayedColumns = [];
-            for (var i = 0; i < columnIdentifiers.length; i++) {
-                var tokenArr = filterTypes[i];
-                if (tokenArr && tokenArr.includes('Hidden')) {
-                    // skip this column from actual display
-                } else {
-                    displayedColumns.push(i);
-                }
-            }
-
-            if (dataArray.length === 0) {
-                var trNoData = document.createElement('tr');
-                var tdNoData = document.createElement('td');
-                var extraCols = (entryViewable ? 1 : 0) + (currentPageParams.role && currentPageParams.role.toLowerCase() === 'user' ? 1 : 0);
-                tdNoData.colSpan = displayedColumns.length + extraCols;
-                tdNoData.textContent = 'No records found.';
-                trNoData.appendChild(tdNoData);
-                tbody.appendChild(trNoData);
                 return;
             }
 
-            for (var r = 0; r < dataArray.length; r++) {
-                var row = dataArray[r];
-                var tr = document.createElement('tr');
+            showDelegationTableLoading();
 
-                // Get the original row index from the last element of the row array
-                var actualRowIndex = row[row.length - 1]; // Last element contains original row index
-
-                // Add view icon cell if entryViewable is not empty
-                if (entryViewable) {
-                    var tdView = document.createElement('td');
-                    tdView.className = 'view-icon-cell';
-                    var viewIcon = document.createElement('span');
-                    viewIcon.className = 'material-symbols-outlined view-icon';
-                    viewIcon.textContent = 'visibility';
-
-                    // Add click handler to open the detail card
-                    (function (rowIndex) {
-                        viewIcon.addEventListener('click', function () {
-                            showDetailCard(rowIndex);
-                        });
-                    })(r);
-
-                    tdView.appendChild(viewIcon);
-                    tr.appendChild(tdView);
-                }
-
-                // For each displayed column (excluding the last element which is the row index)
-                for (var d = 0; d < displayedColumns.length; d++) {
-                    var c = displayedColumns[d];
-                    var cellText = String(row[c] || '');
-
-                    // Check if this column has 'DateRange' so we might want to format dates
-                    if (filterTypes[c].includes('DateRange')) {
-                        cellText = formatDate(cellText, timeZone);
-                    } else if (filterTypes[c].includes('DriveImage')) {
-                        // If it's a DriveImage column
-                        var thumbUrl = getDriveThumbnailUrl(cellText);
-                        if (thumbUrl) {
-                            var tdImg = document.createElement('td');
-                            var img = document.createElement('img');
-                            img.src = thumbUrl;
-                            img.alt = "User Image";
-                            img.style.width = "100px";
-                            img.style.height = "100px";
-                            img.style.cursor = "pointer";
-                            img.addEventListener('click', (function (url) {
-                                return function (e) {
-                                    window.open(url, '_blank');
-                                    e.stopPropagation();
-                                };
-                            })(cellText));
-                            tdImg.appendChild(img);
-                            tr.appendChild(tdImg);
-                            continue;
-                        }
-                    }
-
-                    var td = document.createElement('td');
-
-                    // NEW: Apply logic-based coloring
-                    var backgroundColor = getLogicColor(c, actualRowIndex);
-                    if (backgroundColor) {
-                        td.style.backgroundColor = backgroundColor;
-                    }
-
-                    if (cellText.match(/^https?:\/\//i)) {
-                        var link = document.createElement('a');
-                        link.href = cellText;
-                        link.target = '_blank';
-                        link.innerHTML = '<span class="material-symbols-outlined">link</span>';
-                        td.appendChild(link);
+            google.script.run
+                .withSuccessHandler(function (result) {
+                    console.log('Delegation data loaded:', result);
+                    hideDelegationTableLoading();
+                    if (result.success) {
+                        currentDelegationPageData = result.data;
+                        renderDelegationPageTable(result.data);
                     } else {
-                        td.textContent = cellText;
+                        showError(result.error);
+                        renderDelegationPageTable([]);
                     }
-                    tr.appendChild(td);
-                }
-
-                // Add Access Type cell if role is user
-                if (currentPageParams.role && currentPageParams.role.toLowerCase() === 'user') {
-                    var tdAccess = document.createElement('td');
-                    tdAccess.textContent = currentAccessType || 'Default';
-                    tdAccess.style.fontWeight = 'bold';
-                    tdAccess.style.color = (currentAccessType === 'Full' ? 'green' : 'orange');
-                    tr.appendChild(tdAccess);
-                }
-
-                tbody.appendChild(tr);
-            }
-
-            // Rest of the function remains the same...
-            setTimeout(function () {
-                const tableHeight = document.getElementById('dataTable').offsetHeight;
-                const tableContainer = document.querySelector('.table-container');
-                const computedStyle = window.getComputedStyle(tableContainer);
-                const maxHeight = parseInt(computedStyle.maxHeight);
-
-                if (tableHeight < maxHeight) {
-                    tableContainer.style.height = 'auto';
-                }
-            }, 0);
-
-            applyColumnWidths();
+                })
+                .withFailureHandler(function (error) {
+                    console.error('Error loading delegation data:', error);
+                    hideDelegationTableLoading();
+                    showError('Error loading delegation data: ' + error);
+                    renderDelegationPageTable([]);
+                })
+                .calculateDelegationScores(userName, userRole, startDate, endDate);
         }
 
-        // NEW: Function to get logic-based color for a cell
-        function getLogicColor(columnIndex, rowIndex) {
-            var tokenArr = filterTypes[columnIndex];
-            if (!tokenArr) return null;
+        function renderDelegationPageTable(data) {
+            const tbody = document.getElementById('delegationPageTableBody');
+            if (!tbody) {
+                console.error('delegationPageTableBody element not found');
+                return;
+            }
 
-            // Find logic reference in filter types
-            var logicRef = null;
-            for (var i = 0; i < tokenArr.length; i++) {
-                var token = tokenArr[i].trim();
-                if (logicColumnNames.includes(token)) {
-                    logicRef = token;
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="15" class="text-center">No delegation data found for selected date range</td></tr>';
+                return;
+            }
+
+            // Setup user filter if more than 1 user (reuse existing function but adapt for delegation)
+            setupUserFilter(data);
+
+            // Apply user filter and render
+            renderFilteredDelegationPageTable(data);
+
+            // Reset unsaved changes flag when new data is loaded
+            hasDelegationPageUnsavedChanges = false;
+            const saveBtn = document.getElementById('saveBtn');
+            if (saveBtn) {
+                saveBtn.style.display = 'none';
+            }
+        }
+
+        function renderFilteredDelegationPageTable(data) {
+            const filteredData = applyUserFilter(data);
+            const tbody = document.getElementById('delegationPageTableBody');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+
+            const canEdit = (userRole === 'admin');
+
+            filteredData.forEach(function (row) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.userId}</td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.name}</td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #ffebee;">${row.currentPlannedRed}</td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #fff8e1;">${row.currentPlannedYellow}</td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #e8f5e8;">${row.currentPlannedGreen}</td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #ffebee;">
+                        <div>${row.currentScoreRedCount || 0}</div>
+                        <div style="font-size: 11px; color: #666;">(${row.currentScoreRed}%)</div>
+                      </td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #fff8e1;">
+                        <div>${row.currentScoreYellowCount || 0}</div>
+                        <div style="font-size: 11px; color: #666;">(${row.currentScoreYellow}%)</div>
+                      </td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #e8f5e8;">
+                        <div>${row.currentScoreGreenCount || 0}</div>
+                        <div style="font-size: 11px; color: #666;">(${row.currentScoreGreen}%)</div>
+                      </td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.totalTasks}</td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.completedTasks}</td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.pendingTasks}</td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px;">${row.shiftedTasks}</td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #ffebee;">
+                          <input type="number" class="commitment-input delegation-page-input" data-user="${row.userId}" data-type="red" value="${row.nextCommittedRed || ''}" onchange="markDelegationPageUnsaved()" ${!canEdit ? 'disabled' : ''} style="width: 70px; text-align: center; border: 1px solid #ccc; border-radius: 4px; padding: 4px;">
+                      </td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #fff8e1;">
+                          <input type="number" class="commitment-input delegation-page-input" data-user="${row.userId}" data-type="yellow" value="${row.nextCommittedYellow || ''}" onchange="markDelegationPageUnsaved()" ${!canEdit ? 'disabled' : ''} style="width: 70px; text-align: center; border: 1px solid #ccc; border-radius: 4px; padding: 4px;">
+                      </td>
+                      <td style="text-align: center; border: 1px solid #dee2e6; padding: 8px; background-color: #e8f5e8;">
+                          <input type="number" class="commitment-input delegation-page-input" data-user="${row.userId}" data-type="green" value="${row.nextCommittedGreen || ''}" onchange="markDelegationPageUnsaved()" ${!canEdit ? 'disabled' : ''} style="width: 70px; text-align: center; border: 1px solid #ccc; border-radius: 4px; padding: 4px;">
+                      </td>
+                  `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function showDelegationTableLoading() {
+            const loadingOverlay = document.getElementById('delegationTableLoadingOverlay');
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'flex';
+            }
+        }
+
+        function hideDelegationTableLoading() {
+            const loadingOverlay = document.getElementById('delegationTableLoadingOverlay');
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        function markDelegationPageUnsaved() {
+            hasDelegationPageUnsavedChanges = true;
+            const saveBtn = document.getElementById('saveBtn');
+            if (saveBtn) {
+                saveBtn.style.display = 'block';
+            }
+            console.log('Marked delegation page as unsaved'); // For debugging
+        }
+
+        // Make it globally available
+        window.markDelegationPageUnsaved = markDelegationPageUnsaved;
+
+        // Update the loadCurrentTabData function
+        function loadCurrentTabData() {
+            console.log('Loading current tab data for:', currentMisPageTab);
+            if (currentMisPageTab === 'mis') {
+                loadMisData();
+            } else if (currentMisPageTab === 'delegation') {
+                loadDelegationPageData();
+            }
+        }
+
+        function saveMisChanges() {
+            if (!hasUnsavedChanges) return;
+
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const weekSelect = document.getElementById('weekNumber');
+            const weekNumber = weekSelect.value || getCurrentWeekNumber(startDate);
+
+            if (!weekNumber) {
+                showError('Please select a valid week number');
+                return;
+            }
+
+            const commitmentInputs = document.querySelectorAll('.commitment-input:not(.delegation-page-input):not([disabled])');
+            const commitments = {};
+
+            commitmentInputs.forEach(function (input) {
+                const userId = input.dataset.user;
+                const type = input.dataset.type;
+                const value = input.value ? input.value.trim() : '';
+
+                if (value !== '') {
+                    if (!commitments[userId]) {
+                        commitments[userId] = { wnd: '', wndot: '' };
+                    }
+                    commitments[userId][type] = value;
+                }
+            });
+
+            if (Object.keys(commitments).length === 0) {
+                showError('No commitments to save - please enter values before saving');
+                hasUnsavedChanges = false;
+                const saveBtn = document.getElementById('saveBtn');
+                if (saveBtn) {
+                    saveBtn.style.display = 'none';
+                }
+                return;
+            }
+
+            showTableLoading();
+
+            let saveCount = 0;
+            const totalSaves = Object.keys(commitments).length;
+            let hasError = false;
+
+            function saveNext() {
+                const userIds = Object.keys(commitments);
+                if (saveCount >= totalSaves || hasError) {
+                    hideTableLoading();
+                    if (!hasError) {
+                        hasUnsavedChanges = false;
+                        const saveBtn = document.getElementById('saveBtn');
+                        if (saveBtn) {
+                            saveBtn.style.display = 'none';
+                        }
+                        showSuccess('All MIS commitments saved successfully');
+                        loadMisData();
+                    }
+                    return;
+                }
+
+                const userId = userIds[saveCount];
+                const wndCommitment = commitments[userId].wnd || '';
+                const wndotCommitment = commitments[userId].wndot || '';
+
+                google.script.run
+                    .withSuccessHandler(function () {
+                        saveCount++;
+                        saveNext();
+                    })
+                    .withFailureHandler(function (error) {
+                        hasError = true;
+                        hideTableLoading();
+                        showError('Error saving MIS commitments: ' + error);
+                    })
+                    .saveWorkCommitments(userId, weekNumber, startDate, endDate, wndCommitment, wndotCommitment);
+            }
+
+            saveNext();
+        }
+
+        function saveDelegationPageChanges() {
+            console.log('saveDelegationPageChanges called');
+
+            if (!hasDelegationPageUnsavedChanges) {
+                console.log('No delegation unsaved changes, returning');
+                return;
+            }
+
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const weekSelect = document.getElementById('weekNumber');
+            const weekNumber = weekSelect.value || getCurrentWeekNumber(startDate);
+
+            console.log('Delegation save - dates:', startDate, endDate, 'week:', weekNumber);
+
+            if (!weekNumber) {
+                showError('Please select a valid week number');
+                return;
+            }
+
+            const commitmentInputs = document.querySelectorAll('.delegation-page-input:not([disabled])');
+            console.log('Found delegation inputs:', commitmentInputs.length);
+
+            const commitments = {};
+
+            commitmentInputs.forEach(function (input) {
+                const userId = input.dataset.user;
+                const type = input.dataset.type;
+                const value = input.value ? input.value.trim() : '';
+
+                console.log('Processing input - User:', userId, 'Type:', type, 'Value:', value);
+
+                if (value !== '') {
+                    if (!commitments[userId]) {
+                        commitments[userId] = { red: '', yellow: '', green: '' };
+                    }
+                    commitments[userId][type] = value;
+                }
+            });
+
+            console.log('Final commitments object:', commitments);
+
+            if (Object.keys(commitments).length === 0) {
+                showError('No delegation commitments to save - please enter values before saving');
+                hasDelegationPageUnsavedChanges = false;
+                const saveBtn = document.getElementById('saveBtn');
+                if (saveBtn) {
+                    saveBtn.style.display = 'none';
+                }
+                return;
+            }
+
+            showDelegationTableLoading();
+
+            let saveCount = 0;
+            const totalSaves = Object.keys(commitments).length;
+            let hasError = false;
+
+            function saveNext() {
+                const userIds = Object.keys(commitments);
+                if (saveCount >= totalSaves || hasError) {
+                    hideDelegationTableLoading();
+                    if (!hasError) {
+                        hasDelegationPageUnsavedChanges = false;
+                        const saveBtn = document.getElementById('saveBtn');
+                        if (saveBtn) {
+                            saveBtn.style.display = 'none';
+                        }
+                        showSuccess('All delegation commitments saved successfully');
+                        loadDelegationPageData();
+                    }
+                    return;
+                }
+
+                const userId = userIds[saveCount];
+                const redCommitment = commitments[userId].red || '';
+                const yellowCommitment = commitments[userId].yellow || '';
+                const greenCommitment = commitments[userId].green || '';
+
+                console.log('Calling saveDelegationWorkCommitments for user:', userId, 'with commitments:', redCommitment, yellowCommitment, greenCommitment);
+
+                google.script.run
+                    .withSuccessHandler(function (result) {
+                        console.log('Save success for user:', userId, 'Result:', result);
+                        saveCount++;
+                        saveNext();
+                    })
+                    .withFailureHandler(function (error) {
+                        console.error('Save error for user:', userId, 'Error:', error);
+                        hasError = true;
+                        hideDelegationTableLoading();
+                        showError('Error saving delegation commitments: ' + error);
+                    })
+                    .saveDelegationWorkCommitments(userId, weekNumber, startDate, endDate, redCommitment, yellowCommitment, greenCommitment);
+            }
+
+            saveNext();
+        }
+
+        // Alternative initialization if called normally
+        document.addEventListener('DOMContentLoaded', function () {
+            if (!isInitialized) {
+                window.initializeMISPage();
+            }
+        });
+
+        function showPageLoading() {
+            const loadingOverlay = document.getElementById('pageLoadingOverlay');
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'flex';
+            }
+        }
+
+        function hidePageLoading() {
+            const loadingOverlay = document.getElementById('pageLoadingOverlay');
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        function showTableLoading() {
+            const tableLoading = document.getElementById('tableLoadingOverlay');
+            if (tableLoading) {
+                tableLoading.style.display = 'flex';
+            }
+        }
+
+        function hideTableLoading() {
+            const tableLoading = document.getElementById('tableLoadingOverlay');
+            if (tableLoading) {
+                tableLoading.style.display = 'none';
+            }
+        }
+
+        function setupEventListeners() {
+            console.log('Setting up event listeners...');
+
+            const startDateInput = document.getElementById('startDate');
+            const weekSelect = document.getElementById('weekNumber');
+            const saveBtn = document.getElementById('saveBtn');
+
+            if (startDateInput) {
+                startDateInput.addEventListener('change', function () {
+                    console.log('Start date changed:', this.value);
+                    updateEndDate();
+                    updateWeekSelection();
+                    loadCurrentTabData();
+                });
+            }
+
+            if (weekSelect) {
+                weekSelect.addEventListener('change', function () {
+                    console.log('Week changed:', this.value);
+                    updateDatesFromWeek();
+                    loadCurrentTabData();
+                });
+            }
+
+            if (saveBtn) {
+                saveBtn.addEventListener('click', function () {
+                    console.log('Save button clicked, current tab:', currentMisPageTab);
+                    console.log('Has delegation unsaved changes:', hasDelegationPageUnsavedChanges);
+                    console.log('Has MIS unsaved changes:', hasUnsavedChanges);
+                    saveAllChanges();
+                });
+            }
+
+            // Add reset button event listener
+            const resetMisPageBtn = document.getElementById('resetMisPageBtn');
+            if (resetMisPageBtn) {
+                resetMisPageBtn.addEventListener('click', resetMisPageFilters);
+            }
+        }
+
+        function resetMisPageFilters() {
+            console.log('Resetting MIS page filters to current week...');
+
+            // Calculate current Monday
+            const today = new Date();
+            const mondayOfCurrentWeek = new Date(today);
+            const dayOfWeek = today.getDay();
+            const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            mondayOfCurrentWeek.setDate(today.getDate() + mondayOffset);
+
+            // Set dates
+            const startDateStr = mondayOfCurrentWeek.toISOString().split('T')[0];
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+
+            if (startDateInput) {
+                startDateInput.value = startDateStr;
+                updateEndDate();
+                updateWeekSelection();
+            }
+
+            // Reset user filters to all selected
+            const userCheckboxes = document.querySelectorAll('.user-checkbox');
+            if (userCheckboxes.length > 0) {
+                selectAllUsers();
+            }
+
+            // Hide user filter if only one user
+            const userFilterContainer = document.getElementById('userFilterContainer');
+            if (userFilterContainer && userCheckboxes.length <= 1) {
+                userFilterContainer.style.display = 'none';
+            }
+
+            // Reset unsaved changes flags
+            hasUnsavedChanges = false;
+            hasDelegationPageUnsavedChanges = false;
+            const saveBtn = document.getElementById('saveBtn');
+            if (saveBtn) {
+                saveBtn.style.display = 'none';
+            }
+
+            // Load data for current tab
+            setTimeout(function () {
+                loadCurrentTabData();
+            }, 100);
+
+            console.log('MIS page filters reset to current week:', startDateStr);
+        }
+
+        function loadAvailableWeeks() {
+            console.log('Loading available weeks...');
+
+            if (typeof google === 'undefined' || !google.script || !google.script.run) {
+                console.error('Google Apps Script context not available, retrying...');
+                setTimeout(loadAvailableWeeks, 500);
+                return;
+            }
+
+            google.script.run
+                .withSuccessHandler(function (weeks) {
+                    console.log('Weeks loaded successfully:', weeks);
+
+                    const weekSelect = document.getElementById('weekNumber');
+                    if (!weekSelect) {
+                        console.error('Week select element not found');
+                        return;
+                    }
+
+                    weekSelect.innerHTML = '<option value="">Select Week...</option>';
+
+                    if (weeks && weeks.length > 0) {
+                        weeks.forEach(function (week) {
+                            const option = document.createElement('option');
+                            option.value = week.weekNumber;
+                            option.textContent = week.label;
+                            option.dataset.startDate = week.startDate;
+                            option.dataset.endDate = week.endDate;
+                            weekSelect.appendChild(option);
+                        });
+
+                        console.log('Weeks populated, setting default dates');
+                        setDefaultDates();
+                    } else {
+                        console.log('No weeks available');
+                        weekSelect.innerHTML = '<option value="">No weeks available</option>';
+                        setDefaultDates();
+                    }
+
+                    hidePageLoading();
+                })
+                .withFailureHandler(function (error) {
+                    console.error('Error loading weeks:', error);
+
+                    const weekSelect = document.getElementById('weekNumber');
+                    if (weekSelect) {
+                        weekSelect.innerHTML = '<option value="">Error loading weeks</option>';
+                    }
+
+                    setDefaultDates();
+                    hidePageLoading();
+                })
+                .getAvailableWeeks();
+        }
+
+        function setDefaultDates() {
+            console.log('Setting default dates...');
+
+            const today = new Date();
+            const mondayOfCurrentWeek = new Date(today);
+            const dayOfWeek = today.getDay();
+            const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            mondayOfCurrentWeek.setDate(today.getDate() + mondayOffset);
+
+            const startDateStr = mondayOfCurrentWeek.toISOString().split('T')[0];
+            const startDateInput = document.getElementById('startDate');
+
+            if (startDateInput) {
+                startDateInput.value = startDateStr;
+                console.log('Start date set to:', startDateStr);
+
+                updateEndDate();
+                updateWeekSelection();
+
+                setTimeout(function () {
+                    loadMisData();
+                }, 100);
+            }
+        }
+
+        function updateEndDate() {
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+
+            if (!startDateInput || !endDateInput) return;
+
+            const startDate = startDateInput.value;
+            console.log('Updating end date for start date:', startDate);
+
+            if (startDate) {
+                const endDate = new Date(startDate);
+                endDate.setDate(endDate.getDate() + 6);
+                const endDateStr = endDate.toISOString().split('T')[0];
+                endDateInput.value = endDateStr;
+                console.log('End date set to:', endDateStr);
+            }
+        }
+
+        function updateWeekSelection() {
+            const startDateInput = document.getElementById('startDate');
+            const weekSelect = document.getElementById('weekNumber');
+
+            if (!startDateInput || !weekSelect) return;
+
+            const startDate = startDateInput.value;
+            console.log('Updating week selection for start date:', startDate);
+
+            if (!startDate) return;
+
+            const options = weekSelect.querySelectorAll('option');
+
+            for (let option of options) {
+                if (option.dataset.startDate === startDate) {
+                    weekSelect.value = option.value;
+                    console.log('Week selected:', option.value);
                     break;
                 }
             }
-
-            if (!logicRef) return null;
-
-            // Get color from logic data
-            if (logicData[rowIndex] && logicData[rowIndex][logicRef]) {
-                return logicData[rowIndex][logicRef];
-            }
-
-            return null;
         }
 
-        // -----------------------------------------------------------
-        // 5) Sorting
-        // -----------------------------------------------------------
-        function sortTable(visibleColIndex, actualColIndex) {
-            // We want to sort by the actualColIndex in filteredData
-            // But note: "visibleColIndex" is just the order among non-Hidden columns. 
-            // The easiest approach is just to do the actual sort on `filteredData` by `actualColIndex`.
+        function updateDatesFromWeek() {
+            const weekSelect = document.getElementById('weekNumber');
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
 
-            filteredData.sort(function (a, b) {
-                var valA = a[actualColIndex];
-                var valB = b[actualColIndex];
-                var dateA = new Date(valA);
-                var dateB = new Date(valB);
+            if (!weekSelect || !startDateInput || !endDateInput) return;
 
-                if (!isNaN(dateA.getTime()) && !isNaN(dateB.getTime())) {
-                    return sortAsc ? (dateA - dateB) : (dateB - dateA);
-                } else {
-                    var numA = parseFloat(valA);
-                    var numB = parseFloat(valB);
-                    if (!isNaN(numA) && !isNaN(numB)) {
-                        return sortAsc ? (numA - numB) : (numB - numA);
+            const selectedOption = weekSelect.options[weekSelect.selectedIndex];
+
+            if (selectedOption && selectedOption.dataset.startDate) {
+                const startDate = selectedOption.dataset.startDate;
+                const endDate = selectedOption.dataset.endDate;
+
+                startDateInput.value = startDate;
+                endDateInput.value = endDate;
+
+                console.log('MIS Page dates updated from week - Start:', startDate, 'End:', endDate);
+            }
+        }
+
+        function loadMisData() {
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+
+            if (!startDateInput || !endDateInput) return;
+
+            const startDate = startDateInput.value;
+            const endDate = endDateInput.value;
+
+            console.log('Loading MIS data for:', startDate, 'to', endDate);
+
+            if (!startDate || !endDate) {
+                const tbody = document.getElementById('misTableBody');
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="12" class="text-center">Please select a date range to view data</td></tr>';
+                }
+                return;
+            }
+
+            showTableLoading();
+
+            google.script.run
+                .withSuccessHandler(function (result) {
+                    console.log('MIS data loaded:', result);
+                    hideTableLoading();
+                    if (result.success) {
+                        currentMisData = result.data;
+                        renderMisTable(result.data);
                     } else {
-                        var strA = String(valA).toLowerCase();
-                        var strB = String(valB).toLowerCase();
-                        if (strA < strB) return sortAsc ? -1 : 1;
-                        if (strA > strB) return sortAsc ? 1 : -1;
-                        return 0;
+                        showError(result.error);
+                        renderMisTable([]);
                     }
+                })
+                .withFailureHandler(function (error) {
+                    console.error('Error loading MIS data:', error);
+                    hideTableLoading();
+                    showError('Error loading MIS data: ' + error);
+                    renderMisTable([]);
+                })
+                .calculateMISScores(userName, userRole, startDate, endDate);
+        }
+
+        function renderMisTable(data) {
+            const tbody = document.getElementById('misTableBody');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="12" class="text-center">No data found for selected date range</td></tr>';
+                return;
+            }
+
+            // Setup user filter if more than 1 user (only setup, don't render yet)
+            setupUserFilter(data);
+
+            // Apply user filter and render
+            renderFilteredTable(data);
+
+            // Reset unsaved changes flag when new data is loaded
+            hasUnsavedChanges = false;
+            const saveBtn = document.getElementById('saveBtn');
+            if (saveBtn) {
+                saveBtn.style.display = 'none';
+            }
+        }
+
+        function setupUserFilter(data) {
+            const userFilterContainer = document.getElementById('userFilterContainer');
+
+            if (data.length <= 1) {
+                userFilterContainer.style.display = 'none';
+                return;
+            }
+
+            userFilterContainer.style.display = 'block';
+
+            // Get unique users
+            const users = [];
+            const seen = new Set();
+            data.forEach(row => {
+                if (!seen.has(row.userId)) {
+                    seen.add(row.userId);
+                    users.push({ userId: row.userId, name: row.name });
                 }
             });
 
-            sortAsc = !sortAsc;
-            renderTable(filteredData);
-            renderMetricBoxes();
+            // Check if we need to rebuild the dropdown
+            const existingCheckboxes = document.querySelectorAll('.user-checkbox');
+            const existingUserIds = Array.from(existingCheckboxes).map(cb => cb.value);
+            const newUserIds = users.map(u => u.userId);
 
-            // After sorting and rendering
-            setTimeout(function () {
-                applyColumnWidths();
-            }, 0);
+            // Only rebuild if users have changed
+            if (existingCheckboxes.length !== newUserIds.length ||
+                !existingUserIds.every(id => newUserIds.includes(id))) {
+
+                // Populate user checkboxes
+                const checkboxContainer = document.getElementById('userCheckboxes');
+                checkboxContainer.innerHTML = '';
+
+                users.forEach(user => {
+                    const div = document.createElement('div');
+                    div.className = 'form-check user-option';
+                    div.innerHTML = `
+                          <input class="form-check-input user-checkbox" type="checkbox" value="${user.userId}" id="user_${user.userId.replace(/[^a-zA-Z0-9]/g, '_')}" checked>
+                          <label class="form-check-label" for="user_${user.userId.replace(/[^a-zA-Z0-9]/g, '_')}" style="font-size: 12px;">
+                              ${user.name} (${user.userId})
+                          </label>
+                      `;
+                    checkboxContainer.appendChild(div);
+                });
+
+                // Setup search functionality
+                const searchInput = document.getElementById('userSearch');
+                searchInput.removeEventListener('input', handleUserSearch); // Remove existing listener
+                searchInput.addEventListener('input', handleUserSearch);
+
+                // Setup checkbox change handlers
+                const checkboxes = document.querySelectorAll('.user-checkbox');
+                checkboxes.forEach(checkbox => {
+                    checkbox.removeEventListener('change', handleUserCheckboxChange); // Remove existing listener
+                    checkbox.addEventListener('change', handleUserCheckboxChange);
+                });
+
+                updateUserFilterDisplay(false); // Don't trigger re-render
+            }
         }
 
-        // -----------------------------------------------------------
-        // 6) Filter Logic
-        // -----------------------------------------------------------
-        function onFilterChange() {
-            applyFilters();
-            renderTable(filteredData);
-            renderMetricBoxes();
-            updateSearchFilterDropdowns();
+        function updateUserFilterDisplay(shouldRerender = true) {
+            const checkboxes = document.querySelectorAll('.user-checkbox');
+            const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
+            const button = document.getElementById('userFilterBtn');
+
+            if (checkedBoxes.length === 0) {
+                button.textContent = 'No Users Selected';
+            } else if (checkedBoxes.length === checkboxes.length) {
+                button.textContent = 'All Users';
+            } else if (checkedBoxes.length === 1) {
+                const label = checkedBoxes[0].nextElementSibling.textContent.split(' (')[0];
+                button.textContent = label;
+            } else {
+                button.textContent = `${checkedBoxes.length} Users Selected`;
+            }
+
+            // Only re-render if requested and data exists
+            if (shouldRerender && currentMisData && currentMisData.length > 0) {
+                renderFilteredTable(currentMisData);
+            }
         }
 
-        function applyFilters() {
-            filteredData = data.filter(function (row) {
-                // For each column that has filter tokens
-                for (var i = 0; i < columnIdentifiers.length; i++) {
-                    var tokenArr = filterTypes[i];
-                    if (!tokenArr || tokenArr.length === 0) continue;
+        function applyUserFilter(data) {
+            const checkboxes = document.querySelectorAll('.user-checkbox:checked');
 
-                    // If it has "Search" or "SearchFilter"
-                    var hasSearch = tokenArr.includes('Search');
-                    var hasSearchFilter = tokenArr.includes('SearchFilter');
-                    var hasDateRange = tokenArr.includes('DateRange');
+            if (checkboxes.length === 0) {
+                return data; // Show all if none selected
+            }
 
-                    var cellVal = row[i] || '';
-
-                    // Check if we had assigned filterControls[i]
-                    var fObj = filterControls[i];
-                    if (!fObj) {
-                        // But maybe we do have dateRange in the same object with Search
-                        if (fObj && fObj.dateRange) {
-                            // We'll handle that below
-                        }
-                        continue;
-                    }
-
-                    // 1) “Search” text filter
-                    if (hasSearch && fObj.type === 'Search') {
-                        var searchVal = fObj.control.value.trim().toLowerCase();
-                        if (searchVal && String(cellVal).toLowerCase().indexOf(searchVal) === -1) {
-                            return false;
-                        }
-                    }
-
-                    // 2) “SearchFilter” auto‐complete
-                    if (hasSearchFilter && fObj.type === 'SearchFilter') {
-                        var selected = fObj.selectedValue;
-                        if (selected && String(cellVal).toLowerCase() !== selected.toLowerCase()) {
-                            return false;
-                        }
-                    }
-
-                    // 3) “DateRange”
-                    // Possibly it’s stored in fObj if it has `type === 'DateRange'`.
-                    // Or if we had both “Search” & “DateRange” in the same column, 
-                    // we might have put dateRange sub‐object in fObj. Let’s check both:
-                    if (hasDateRange) {
-                        var startVal, endVal;
-                        if (fObj.type === 'DateRange') {
-                            startVal = fObj.start.value;
-                            endVal = fObj.end.value;
-                        } else if (fObj.dateRange) {
-                            startVal = fObj.dateRange.start.value;
-                            endVal = fObj.dateRange.end.value;
-                        }
-
-                        if (startVal || endVal) {
-                            var cellDate = new Date(cellVal);
-                            if (isNaN(cellDate.getTime())) {
-                                // If the cell is not a valid date, exclude
-                                return false;
-                            }
-                            var filterStart = parseDateInput(startVal);
-                            var filterEnd = parseDateInput(endVal);
-                            if (filterStart && cellDate < filterStart) return false;
-                            if (filterEnd && cellDate > filterEnd) return false;
-                        }
-                    }
-                }
-                return true;
-            });
-
-            // After the filter is done
-            setTimeout(function () {
-                applyColumnWidths();
-            }, 0);
+            const selectedUserIds = Array.from(checkboxes).map(cb => cb.value);
+            return data.filter(row => selectedUserIds.includes(row.userId));
         }
 
-        function updateSearchFilterDropdowns() {
-            // For each column that has “SearchFilter,” re‐build the list of possible suggestions if open
-            for (var i = 0; i < columnIdentifiers.length; i++) {
-                var tokenArr = filterTypes[i];
-                if (!tokenArr || !tokenArr.includes('SearchFilter')) continue;
-                var fObj = filterControls[i];
-                if (!fObj || fObj.type !== 'SearchFilter') continue;
-                if (fObj.suggestionsContainer.style.display === 'block') {
-                    var currentText = fObj.control.value || '';
-                    updateAutocompleteSuggestions(i, currentText);
+        function selectAllUsers() {
+            const checkboxes = document.querySelectorAll('.user-checkbox');
+            checkboxes.forEach(checkbox => checkbox.checked = true);
+            updateUserFilterDisplay(true);
+        }
+
+        window.selectAllUsers = selectAllUsers;
+
+        function clearAllUsers() {
+            const checkboxes = document.querySelectorAll('.user-checkbox');
+            checkboxes.forEach(checkbox => checkbox.checked = false);
+            updateUserFilterDisplay(true);
+        }
+
+        window.clearAllUsers = clearAllUsers;
+
+        // Prevent dropdown from closing when clicking inside
+        document.addEventListener('DOMContentLoaded', function () {
+            const dropdown = document.getElementById('userDropdown');
+            if (dropdown) {
+                dropdown.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                });
+            }
+        });
+
+        function markUnsaved() {
+            hasUnsavedChanges = true;
+            const saveBtn = document.getElementById('saveBtn');
+            if (saveBtn) {
+                saveBtn.style.display = 'block';
+            }
+        }
+
+        // Make it globally available
+        window.markUnsaved = markUnsaved;
+
+        function saveAllChanges() {
+            console.log('saveAllChanges called - Current tab:', currentMisPageTab);
+            console.log('Has delegation unsaved changes:', hasDelegationPageUnsavedChanges);
+            console.log('Has MIS unsaved changes:', hasUnsavedChanges);
+
+            if (currentMisPageTab === 'mis' && hasUnsavedChanges) {
+                console.log('Saving MIS changes...');
+                saveMisChanges();
+            } else if (currentMisPageTab === 'delegation' && hasDelegationPageUnsavedChanges) {
+                console.log('Saving delegation changes...');
+                saveDelegationPageChanges();
+            } else {
+                console.log('No unsaved changes or unknown tab:', currentMisPageTab);
+                // Hide save button if no changes
+                const saveBtn = document.getElementById('saveBtn');
+                if (saveBtn) {
+                    saveBtn.style.display = 'none';
                 }
             }
         }
 
-        // -----------------------------------------------------------
-        // 7) Reset Filters
-        // -----------------------------------------------------------
-        function resetFilters() {
-            for (var i = 0; i < filterControls.length; i++) {
-                var fObj = filterControls[i];
-                if (!fObj) continue;
+        function saveMisChanges() {
+            if (!hasUnsavedChanges) return;
 
-                // If the column has “Search”
-                if (fObj.type === 'Search') {
-                    fObj.control.value = '';
-                }
-                // If the column has “SearchFilter”
-                if (fObj.type === 'SearchFilter') {
-                    fObj.control.value = '';
-                    fObj.selectedValue = '';
-                    closeDropdown(i);
-                }
-                // If date range
-                if (fObj.type === 'DateRange') {
-                    fObj.start.value = '';
-                    fObj.end.value = '';
-                }
-                // Or if we have dateRange sub‐object
-                if (fObj.dateRange) {
-                    fObj.dateRange.start.value = '';
-                    fObj.dateRange.end.value = '';
-                }
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const weekSelect = document.getElementById('weekNumber');
+            const weekNumber = weekSelect.value || getCurrentWeekNumber(startDate);
+
+            if (!weekNumber) {
+                showError('Please select a valid week number');
+                return;
             }
-            applyFilters();
-            renderTable(filteredData);
-            renderMetricBoxes();
-            updateSearchFilterDropdowns();
-        }
 
-        // -----------------------------------------------------------
-        // 8) Autocomplete: open & close
-        // -----------------------------------------------------------
-        function openDropdown(index) {
-            var fObj = filterControls[index];
-            if (!fObj) return;
-            var currentText = fObj.control.value || '';
-            updateAutocompleteSuggestions(index, currentText);
-            fObj.suggestionsContainer.style.display = 'block';
-        }
-        function closeDropdown(index) {
-            var fObj = filterControls[index];
-            if (!fObj) return;
-            fObj.suggestionsContainer.style.display = 'none';
-        }
+            const commitmentInputs = document.querySelectorAll('.commitment-input:not(.delegation-page-input):not([disabled])');
+            const commitments = {};
 
-        // -----------------------------------------------------------
-        // 9) Update suggestions for the “SearchFilter”
-        // -----------------------------------------------------------
-        function updateAutocompleteSuggestions(index, searchTerm) {
-            var fObj = filterControls[index];
-            if (!fObj) return;
-            var container = fObj.suggestionsContainer;
-            var vals = fObj.fullUniqueVals || [];
+            commitmentInputs.forEach(function (input) {
+                const userId = input.dataset.user;
+                const type = input.dataset.type;
+                const value = input.value ? input.value.trim() : '';
 
-            // Build a count map from *filteredData* for that column
-            var countMap = {};
-            for (var r = 0; r < filteredData.length; r++) {
-                var val = filteredData[r][index];
-                if (val !== undefined && val !== '') {
-                    countMap[val] = (countMap[val] || 0) + 1;
+                if (value !== '') {
+                    if (!commitments[userId]) {
+                        commitments[userId] = { wnd: '', wndot: '' };
+                    }
+                    commitments[userId][type] = value;
                 }
-            }
-            // Only show values that match searchTerm (if typed) & are present in filtered table
-            var filteredVals = vals.filter(function (v) {
-                return v.toLowerCase().indexOf(searchTerm.toLowerCase()) !== -1 && countMap[v] > 0;
             });
+
+            if (Object.keys(commitments).length === 0) {
+                showError('No commitments to save - please enter values before saving');
+                hasUnsavedChanges = false;
+                const saveBtn = document.getElementById('saveBtn');
+                if (saveBtn) {
+                    saveBtn.style.display = 'none';
+                }
+                return;
+            }
+
+            showTableLoading();
+
+            let saveCount = 0;
+            const totalSaves = Object.keys(commitments).length;
+            let hasError = false;
+
+            function saveNext() {
+                const userIds = Object.keys(commitments);
+                if (saveCount >= totalSaves || hasError) {
+                    hideTableLoading();
+                    if (!hasError) {
+                        hasUnsavedChanges = false;
+                        const saveBtn = document.getElementById('saveBtn');
+                        if (saveBtn) {
+                            saveBtn.style.display = 'none';
+                        }
+                        showSuccess('All MIS commitments saved successfully');
+                        loadMisData();
+                    }
+                    return;
+                }
+
+                const userId = userIds[saveCount];
+                const wndCommitment = commitments[userId].wnd || '';
+                const wndotCommitment = commitments[userId].wndot || '';
+
+                google.script.run
+                    .withSuccessHandler(function () {
+                        saveCount++;
+                        saveNext();
+                    })
+                    .withFailureHandler(function (error) {
+                        hasError = true;
+                        hideTableLoading();
+                        showError('Error saving MIS commitments: ' + error);
+                    })
+                    .saveWorkCommitments(userId, weekNumber, startDate, endDate, wndCommitment, wndotCommitment);
+            }
+
+            saveNext();
+        }
+
+        function getCurrentWeekNumber(dateStr) {
+            if (!dateStr) return null;
+
+            // Try to use the same logic as the backend getWeekNumber function
+            const date = new Date(dateStr);
+
+            // Check if there are available weeks in the dropdown first
+            const weekSelect = document.getElementById('weekNumber');
+            if (weekSelect) {
+                const options = weekSelect.querySelectorAll('option');
+
+                for (let option of options) {
+                    if (option.dataset.startDate === dateStr) {
+                        return parseInt(option.value);
+                    }
+                }
+            }
+
+            // Fallback to calculation
+            const startOfYear = new Date(date.getFullYear(), 0, 1);
+            const diffInTime = date.getTime() - startOfYear.getTime();
+            const diffInDays = Math.ceil(diffInTime / (1000 * 3600 * 24));
+            return Math.ceil(diffInDays / 7);
+        }
+
+        function viewProcessDetails(userId, userName) {
+            console.log('View process details called for:', userId, userName);
+
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+
+            if (!startDateInput || !endDateInput) {
+                console.error('Date inputs not found');
+                showError('Date inputs not found');
+                return;
+            }
+
+            const startDate = startDateInput.value;
+            const endDate = endDateInput.value;
+
+            if (!startDate || !endDate) {
+                showError('Please select a valid date range');
+                return;
+            }
+
+            console.log('Calling with dates:', startDate, 'to', endDate);
+            showProcessModalWithLoading(userId, userName, startDate, endDate);
+
+            try {
+                google.script.run
+                    .withSuccessHandler(function (result) {
+                        console.log('Process details result:', result);
+                        if (result && result.success) {
+                            populateProcessModal(result.data);
+                        } else {
+                            showProcessModalError('Error: ' + (result.error || 'Unknown error'));
+                        }
+                    })
+                    .withFailureHandler(function (error) {
+                        console.error('Process details error:', error);
+                        showProcessModalError('Error loading process details: ' + error);
+                    })
+                    .getProcessDetails(userId, startDate, endDate);
+            } catch (error) {
+                console.error('Exception calling getProcessDetails:', error);
+                showProcessModalError('Error calling process details: ' + error);
+            }
+        }
+
+        // Make it globally available
+        window.viewProcessDetails = viewProcessDetails;
+
+        function showProcessModalWithLoading(userId, userName, startDate, endDate) {
+            const modalTitle = document.getElementById('modalTitle');
+            const modalSubtitle = document.getElementById('modalSubtitle');
+            const container = document.getElementById('processTableContainer');
+            const modal = document.getElementById('processModal');
+
+            if (modalTitle) modalTitle.textContent = `Process Details - ${userName}`;
+            if (modalSubtitle) modalSubtitle.textContent = `${userId} | ${startDate} to ${endDate}`;
+
+            if (container) {
+                container.innerHTML = `
+                        <div style="display: flex; justify-content: center; align-items: center; padding: 50px;">
+                            <div class="loading-spinner"></div>
+                        </div>
+                    `;
+            }
+
+            if (modal) {
+                modal.style.display = 'flex';
+            }
+        }
+
+        function populateProcessModal(processData) {
+            const container = document.getElementById('processTableContainer');
+            if (!container) return;
 
             container.innerHTML = '';
 
-            // "Select All"
-            var selectAllDiv = document.createElement('div');
-            selectAllDiv.className = 'list-group-item list-group-item-action';
-            selectAllDiv.textContent = "Select All";
-            selectAllDiv.addEventListener('click', function (e) {
-                fObj.control.value = "";
-                fObj.selectedValue = "";
-                closeDropdown(index);
-                onFilterChange();
-                e.stopPropagation();
-            });
-            container.appendChild(selectAllDiv);
-
-            filteredVals.forEach(function (item) {
-                var count = countMap[item] || 0;
-                var itemDiv = document.createElement('div');
-                itemDiv.className = 'list-group-item list-group-item-action';
-
-                var leftSpan = document.createElement('span');
-                leftSpan.textContent = item;
-                var rightSpan = document.createElement('span');
-                rightSpan.textContent = "(" + count + ")";
-                itemDiv.appendChild(leftSpan);
-                itemDiv.appendChild(rightSpan);
-
-                itemDiv.addEventListener('click', function (e) {
-                    fObj.control.value = item;
-                    fObj.selectedValue = item;
-                    closeDropdown(index);
-                    onFilterChange();
-                    e.stopPropagation();
-                });
-                container.appendChild(itemDiv);
-            });
-            container.style.display = 'block';
-        }
-
-        // -----------------------------------------------------------
-        // 10) Date Helpers
-        // -----------------------------------------------------------
-        function formatDate(cellText, timeZone) {
-            var d = new Date(cellText);
-            if (isNaN(d.getTime())) return cellText;
-
-            var timeString = new Intl.DateTimeFormat('en-GB', {
-                timeZone: timeZone,
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            }).format(d);
-
-            var dateString = new Intl.DateTimeFormat('en-GB', {
-                timeZone: timeZone,
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit'
-            }).format(d);
-
-            // if time is exactly "00:00", just display the date
-            if (timeString === "00:00") {
-                return dateString;
+            if (processData.length === 0) {
+                container.innerHTML = '<p class="text-center" style="padding: 20px;">No process data found for selected date range</p>';
             } else {
-                return dateString + " " + timeString;
+                const table = document.createElement('table');
+                table.className = 'process-table';
+
+                table.innerHTML = `
+                        <thead>
+                            <tr>
+                                <th>Process Name</th>
+                                <th>Total Task</th>
+                                <th>Total Completed</th>
+                                <th>Task Score</th>
+                                <th>Total Complete Task</th>
+                                <th>On Time Done Task</th>
+                                <th>Time Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${processData.map(process => `
+                                <tr>
+                                    <td>${process.processName}</td>
+                                    <td>${process.totalTasks}</td>
+                                    <td>${process.totalCompleted}</td>
+                                    <td>${process.taskScore}</td>
+                                    <td>${process.totalCompleteTasks}</td>
+                                    <td>${process.onTimeDoneTasks}</td>
+                                    <td>${process.timeScore}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    `;
+
+                container.appendChild(table);
             }
         }
 
-        function parseDateInput(str) {
-            if (!str) return null;
-            var dashFormat = /^(\d{4})-(\d{2})-(\d{2})$/;
-            var slashFormat = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
-            var matchDash = str.match(dashFormat);
-            if (matchDash) {
-                var yyyy = parseInt(matchDash[1], 10);
-                var mm = parseInt(matchDash[2], 10);
-                var dd = parseInt(matchDash[3], 10);
-                return new Date(yyyy, mm - 1, dd);
-            }
-            var matchSlash = str.match(slashFormat);
-            if (matchSlash) {
-                var dd2 = parseInt(matchSlash[1], 10);
-                var mm2 = parseInt(matchSlash[2], 10);
-                var yyyy2 = parseInt(matchSlash[3], 10);
-                return new Date(yyyy2, mm2 - 1, dd2);
-            }
-            var d = new Date(str);
-            return isNaN(d.getTime()) ? null : d;
-        }
-
-        // -----------------------------------------------------------
-        // 11) Drive Image Helper
-        // -----------------------------------------------------------
-        function getDriveThumbnailUrl(driveLink) {
-            if (!driveLink) return "";
-            var match = driveLink.match(/\/file\/d\/([^/]+)\//);
-            if (match && match[1]) {
-                var fileId = match[1];
-                return "https://drive.google.com/thumbnail?id=" + fileId + "&sz=200";
-            }
-            return "";
-        }
-
-        // -----------------------------------------------------------
-        // 12) Rendering Metric Boxes
-        // -----------------------------------------------------------
-        function renderMetricBoxes() {
-            var container = document.getElementById('metricContainer');
-            container.innerHTML = "";
-
-            for (var i = 0; i < columnIdentifiers.length; i++) {
-                var tokenArr = filterTypes[i];
-                if (!tokenArr || tokenArr.length === 0) continue;
-
-                // Check if there's any of the arithmetic metrics: Sum, Avg, Min, Max, Count
-                var hasSum = tokenArr.includes('Sum');
-                var hasAvg = tokenArr.includes('Avg');
-                var hasMin = tokenArr.includes('Min');
-                var hasMax = tokenArr.includes('Max');
-                var hasCount = tokenArr.includes('Count');
-
-                // If none, skip
-                if (!hasSum && !hasAvg && !hasMin && !hasMax && !hasCount) continue;
-
-                // We'll parse the numeric values in that column from filteredData
-                var countNums = 0, sumNums = 0;
-                var minVal = null, maxVal = null;
-
-                for (var r = 0; r < filteredData.length; r++) {
-                    var cell = filteredData[r][i];
-                    var num = parseFloat(cell);
-                    if (!isNaN(num)) {
-                        countNums++;
-                        sumNums += num;
-                        if (minVal === null || num < minVal) {
-                            minVal = num;
-                        }
-                        if (maxVal === null || num > maxVal) {
-                            maxVal = num;
-                        }
-                    }
-                }
-
-                // We'll show each metric in its own “box” or combine them? Up to you. 
-                // Suppose we show each metric as a separate box, all labeled with the column name. 
-                // Or group them. Let's do separate boxes for clarity:
-                var formatter = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-                if (hasCount) {
-                    var boxCount = createMetricBox(headers[i], 'Count', filteredData.length);
-                    container.appendChild(boxCount);
-                }
-                if (hasSum) {
-                    var boxSum = createMetricBox(headers[i], 'Sum', countNums > 0 ? formatter.format(sumNums) : '0.00');
-                    container.appendChild(boxSum);
-                }
-                if (hasAvg) {
-                    var avgVal = (countNums > 0) ? (sumNums / countNums) : 0;
-                    var boxAvg = createMetricBox(headers[i], 'Avg', countNums > 0 ? formatter.format(avgVal) : '0.00');
-                    container.appendChild(boxAvg);
-                }
-                if (hasMin) {
-                    var boxMin = createMetricBox(headers[i], 'Min', minVal !== null ? formatter.format(minVal) : '');
-                    container.appendChild(boxMin);
-                }
-                if (hasMax) {
-                    var boxMax = createMetricBox(headers[i], 'Max', maxVal !== null ? formatter.format(maxVal) : '');
-                    container.appendChild(boxMax);
-                }
+        function showProcessModalError(errorMessage) {
+            const container = document.getElementById('processTableContainer');
+            if (container) {
+                container.innerHTML = `<p class="text-center" style="color: red; padding: 20px;">${errorMessage}</p>`;
             }
         }
 
-        function createMetricBox(colName, metricType, value) {
-            var box = document.createElement('div');
-            box.className = "metric-box";
-            // Column name (bold)
-            var columnSpan = document.createElement('span');
-            columnSpan.style.fontWeight = "bold";
-            columnSpan.textContent = colName;
-            box.appendChild(columnSpan);
-
-            // Metric type (italic)
-            var typeSpan = document.createElement('span');
-            typeSpan.style.fontStyle = "italic";
-            typeSpan.textContent = metricType + ":";
-            box.appendChild(typeSpan);
-
-            // Computed value
-            var valSpan = document.createElement('span');
-            valSpan.textContent = value;
-            box.appendChild(valSpan);
-
-            return box;
-        }
-
-        // -----------------------------------------------------------
-        // 13) Render Custom Buttons (the ones you pass in from code.gs)
-        // -----------------------------------------------------------
-        function renderCustomButtons() {
-            var container = document.getElementById('customButtonsContainer');
-            container.innerHTML = "";  // Clear old
-            buttons.forEach(function (btn) {
-                var b = document.createElement('button');
-                b.className = "btn btn-primary custom-btn";
-                b.textContent = btn.name;
-                b.onclick = function () {
-                    window.open(btn.url, '_blank');
-                };
-                container.appendChild(b);
-            });
-        }
-
-        // Refresh data function
-        function refreshData() {
-            // Show loading indicator
-            document.getElementById('refreshBtn').disabled = true;
-            document.getElementById('refreshBtn').innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Refreshing...';
-
-            // Get the access type from localStorage instead of the template variable
-            var storedAccessType = localStorage.getItem('currentSheetAccessType') || "";
-
-            // Create params object with the access type and all relevant page information
-            var refreshParams = {
-                sheetName: currentPageParams.sheetName,
-                pageTitle: currentPageParams.pageTitle,
-                externalId: currentPageParams.externalId,
-                rangeSpec: currentPageParams.rangeSpec,
-                userName: currentPageParams.userName,
-                role: currentPageParams.role,
-                accessType: storedAccessType
-            };
-
-            // Call the server
-            google.script.run
-                .withSuccessHandler(function (result) {
-                    // Replace the current container with the new content
-                    document.getElementById('paramContainer').innerHTML = result;
-
-                    // Execute any scripts in the new content
-                    var scripts = document.getElementById('paramContainer').querySelectorAll('script');
-                    scripts.forEach(function (script) {
-                        eval(script.textContent);
-                    });
-
-                    // Update refresh time
-                    lastRefreshTime = new Date();
-                    updateLastRefreshedText();
-                })
-                .withFailureHandler(function (error) {
-                    alert('Error refreshing data: ' + error);
-                    document.getElementById('refreshBtn').disabled = false;
-                    document.getElementById('refreshBtn').innerHTML = '<i class="material-symbols-outlined" style="vertical-align: middle; font-size: 18px;">refresh</i> Refresh';
-                })
-                .refreshParamData(refreshParams);
-        }
-
-        function startRefreshTimer() {
-            // Clear any existing timer
-            if (refreshTimer) {
-                clearInterval(refreshTimer);
+        function closeProcessModal() {
+            const modal = document.getElementById('processModal');
+            if (modal) {
+                modal.style.display = 'none';
             }
         }
 
-        function updateLastRefreshedText() {
-            const now = new Date();
-            const diffMs = now - lastRefreshTime;
-            const diffMins = Math.floor(diffMs / 60000);
+        // Make it globally available
+        window.closeProcessModal = closeProcessModal;
 
-            const refreshedText = document.getElementById('lastRefreshedText');
+        // Make reset function globally available
+        window.resetMisPageFilters = resetMisPageFilters;
 
-            if (diffMins < 1) {
-                refreshedText.textContent = 'Refreshed now';
-            } else if (diffMins === 1) {
-                refreshedText.textContent = 'Refreshed 1 minute ago';
-            } else {
-                refreshedText.textContent = `Refreshed ${diffMins} minutes ago`;
-            }
-
-            // Update the text every minute
-            window.refreshTextTimeout = setTimeout(updateLastRefreshedText, 60000);
+        function showError(message) {
+            alert('Error: ' + message);
         }
 
-        function adjustTableHeight() {
-            // Get the navbar height (110px from your margin-top setting)
-            const navbarHeight = 110;
-
-            // Get the footer element - based on your main.html, it's 50px tall
-            const footerHeight = 50;
-
-            // Get any additional margins or padding
-            const additionalSpace = 20; // For margins, paddings, etc.
-
-            // Calculate the available height
-            const windowHeight = window.innerHeight;
-            const availableHeight = windowHeight - navbarHeight - footerHeight - additionalSpace;
-
-            // Apply the calculated MAX height to the table container
-            const tableContainer = document.querySelector('.table-container');
-            if (tableContainer) {
-                tableContainer.style.maxHeight = availableHeight + 'px';
-
-                // Remove any fixed height that might be set
-                tableContainer.style.height = 'auto';
-            }
+        function showSuccess(message) {
+            alert('Success: ' + message);
         }
 
-        // Call initially and on window resize
-        window.addEventListener('resize', adjustTableHeight);
-
-        // Add this function to ParamIndex.html, above or near the showDetailCard function
-        function columnToIndex(colRef) {
-            if (colRef.length === 1) {
-                // Single letter (A-Z)
-                return colRef.charCodeAt(0) - 65; // A=0, B=1, ...
-            } else if (!isNaN(colRef)) {
-                // If it's a number, use it directly (minus 1 to convert to 0-based)
-                return parseInt(colRef) - 1;
-            } else {
-                // Multi-letter column (AA, AB, etc.)
-                var result = 0;
-                for (var i = 0; i < colRef.length; i++) {
-                    result = result * 26 + (colRef.charCodeAt(i) - 64);
-                }
-                return result - 1; // Adjust to 0-based index
+        // Close modal when clicking outside
+        document.addEventListener('click', function (e) {
+            const modal = document.getElementById('processModal');
+            if (e.target === modal) {
+                closeProcessModal();
             }
-        }
+        });
 
-        function showDetailCard(rowIndex) {
-            var overlay = document.getElementById('detailCardOverlay');
-            var card = document.getElementById('detailCard');
-            var cardContent = document.getElementById('detailCardContent');
-            var row = filteredData[rowIndex];
-
-            // Get original row index from the last element
-            var originalRowIndex = row[row.length - 1];
-
-            // Clear previous content
-            cardContent.innerHTML = '';
-
-            // Parse the entryViewable value using the new format (A,B,D),(C,E)
-            var viewConfig = entryViewable || "";
-
-            // Extract the two sections within parentheses
-            var labelDataColumns = [];
-            var tabularColumns = [];
-
-            // Match content inside first and second parentheses using regex
-            var matches = viewConfig.match(/\(([^)]*)\)\s*,\s*\(([^)]*)\)/);
-
-            if (matches) {
-                // First group - label-data format
-                if (matches[1] && matches[1].trim() !== "") {
-                    labelDataColumns = matches[1].split(',').map(function (col) {
-                        return col.trim();
-                    }).filter(Boolean);
-                }
-
-                // Second group - tabular format
-                if (matches[2] && matches[2].trim() !== "") {
-                    tabularColumns = matches[2].split(',').map(function (col) {
-                        return col.trim();
-                    }).filter(Boolean);
-                }
-            } else {
-                // Handle single parenthesis case like (A,B,C)
-                var singleMatch = viewConfig.match(/\(([^)]*)\)/);
-                if (singleMatch && singleMatch[1]) {
-                    labelDataColumns = singleMatch[1].split(',').map(function (col) {
-                        return col.trim();
-                    }).filter(Boolean);
-                }
+        // Warn about unsaved changes
+        window.addEventListener('beforeunload', function (e) {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = '';
             }
+        });
 
-            // Get column index map (for both single letter and multi-letter columns)
-            var columnMap = {};
-            for (var i = 0; i < columnIdentifiers.length; i++) {
-                // Use the columnIdentifiers values instead of generating A, B, C...
-                // This will handle AA, AB, etc. correctly
-                columnMap[i] = i;
+        // Also ensure initialization function is available
+        window.initializeMISPage = window.initializeMISPage || function () {
+            if (isInitialized) return;
+            isInitialized = true;
 
-                // Also map A->0, B->1, etc. for backward compatibility and easier reference
-                if (i < 26) {
-                    columnMap[String.fromCharCode(65 + i)] = i;
-                }
-            }
+            console.log('Initializing MIS Page...');
+            showPageLoading();
+            setupEventListeners();
 
-            // First section: Label-data format (full width container)
-            if (labelDataColumns.length > 0) {
-                var labelDataSection = document.createElement('div');
-                labelDataSection.className = 'detail-section';
-                labelDataSection.style.width = '100%';
-                labelDataSection.style.display = 'flex';
-                labelDataSection.style.flexWrap = 'wrap';
-                labelDataSection.style.gap = '10px';
-
-                labelDataColumns.forEach(function (colRef) {
-                    // Convert column reference to index
-                    var colIndex;
-
-                    if (colRef.length === 1) {
-                        // Single letter: A, B, C...
-                        colIndex = columnMap[colRef];
-                    } else if (!isNaN(colRef)) {
-                        // Numeric index
-                        colIndex = parseInt(colRef);
-                    } else {
-                        // Multi-letter: AA, AB, etc.
-                        // Convert to 0-based index (A=0, B=1, ..., Z=25, AA=26, AB=27, etc.)
-                        var index = 0;
-                        for (var i = 0; i < colRef.length; i++) {
-                            index = index * 26 + (colRef.charCodeAt(i) - 64);
-                        }
-                        colIndex = index - 1; // Adjust to 0-based index
-                    }
-
-                    if (colIndex === undefined || colIndex < 0 || colIndex >= columnIdentifiers.length) return;
-
-                    var fieldDiv = document.createElement('div');
-                    fieldDiv.className = 'detail-field';
-                    fieldDiv.style.width = 'calc(50% - 10px)';
-                    fieldDiv.style.padding = '4px 8px';
-                    fieldDiv.style.boxSizing = 'border-box';
-
-                    var labelDiv = document.createElement('div');
-                    labelDiv.className = 'detail-label';
-                    labelDiv.style.fontWeight = 'bold';
-                    labelDiv.style.marginBottom = '5px';
-                    labelDiv.textContent = headers[colIndex];
-
-                    var valueDiv = document.createElement('div');
-                    valueDiv.className = 'detail-value';
-
-                    // Handle special formatting
-                    var cellValue = row[colIndex];
-                    if (filterTypes[colIndex].includes('DateRange')) {
-                        cellValue = formatDate(cellValue, timeZone);
-                    } else if (filterTypes[colIndex].includes('DriveImage')) {
-                        var thumbUrl = getDriveThumbnailUrl(cellValue);
-                        if (thumbUrl) {
-                            var img = document.createElement('img');
-                            img.src = thumbUrl;
-                            img.alt = "Image";
-                            img.style.width = "100px";
-                            img.style.height = "100px";
-
-                            // Remove background styling for the value div that contains images
-                            valueDiv.style.background = "none";
-                            valueDiv.style.border = "none";
-                            valueDiv.style.padding = "0";
-
-                            valueDiv.appendChild(img);
-                            fieldDiv.appendChild(labelDiv);
-                            fieldDiv.appendChild(valueDiv);
-                            labelDataSection.appendChild(fieldDiv);
-                            return;
-                        }
-                    }
-
-                    // Handle links
-                    if (String(cellValue).match(/^https?:\/\//i)) {
-                        var link = document.createElement('a');
-                        link.href = cellValue;
-                        link.target = '_blank';
-                        link.textContent = 'Click Here';
-                        valueDiv.appendChild(link);
-                    } else {
-                        valueDiv.textContent = cellValue || '';
-                    }
-
-                    fieldDiv.appendChild(labelDiv);
-                    fieldDiv.appendChild(valueDiv);
-                    labelDataSection.appendChild(fieldDiv);
-                });
-
-                cardContent.appendChild(labelDataSection);
-            }
-
-            // Second section: Tabular format (full width container)
-            if (tabularColumns.length > 0) {
-                var tableSection = document.createElement('div');
-                tableSection.className = 'detail-table-section';
-                tableSection.style.width = '100%';
-                tableSection.style.marginTop = '20px';
-                // tableSection.style.borderTop = '1px solid #eee';
-                tableSection.style.paddingTop = '20px';
-
-                // Create table wrapper for scrolling
-                var tableWrapper = document.createElement('div');
-                tableWrapper.style.width = '100%';
-                tableWrapper.style.maxHeight = '200px';
-                tableWrapper.style.overflowY = 'auto';
-                tableWrapper.style.overflowX = 'auto';
-                tableWrapper.style.border = '1px solid #dee2e6';
-                tableWrapper.style.borderRadius = '4px';
-
-                // Create table
-                var table = document.createElement('table');
-                table.className = 'table table-bordered table-sm';
-                table.style.width = '100%';
-                table.style.margin = '0';
-
-                // Table header row
-                var thead = document.createElement('thead');
-                var headerRow = document.createElement('tr');
-
-                // Track valid column indices
-                var validColIndices = [];
-
-                tabularColumns.forEach(function (colRef) {
-                    // Convert column reference to index
-                    var colIndex;
-
-                    if (colRef.length === 1) {
-                        // Single letter: A, B, C...
-                        colIndex = columnMap[colRef];
-                    } else if (!isNaN(colRef)) {
-                        // Numeric index
-                        colIndex = parseInt(colRef);
-                    } else {
-                        // Multi-letter: AA, AB, etc.
-                        // Convert to 0-based index
-                        var index = 0;
-                        for (var i = 0; i < colRef.length; i++) {
-                            index = index * 26 + (colRef.charCodeAt(i) - 64);
-                        }
-                        colIndex = index - 1; // Adjust to 0-based index
-                    }
-
-                    if (colIndex === undefined || colIndex < 0 || colIndex >= columnIdentifiers.length) return;
-
-                    validColIndices.push(colIndex);
-
-                    var th = document.createElement('th');
-                    th.textContent = headers[colIndex];
-                    th.style.backgroundColor = '#f8f9fa';
-                    th.style.position = 'sticky';
-                    th.style.top = '0';
-                    th.style.zIndex = '1';
-                    headerRow.appendChild(th);
-                });
-
-                thead.appendChild(headerRow);
-                table.appendChild(thead);
-
-                // Table data row
-                var tbody = document.createElement('tbody');
-                var dataRow = document.createElement('tr');
-
-                validColIndices.forEach(function (colIndex) {
-                    var td = document.createElement('td');
-
-                    // Handle special formatting
-                    var cellValue = row[colIndex];
-                    if (filterTypes[colIndex].includes('DateRange')) {
-                        cellValue = formatDate(cellValue, timeZone);
-                    } else if (filterTypes[colIndex].includes('DriveImage')) {
-                        var thumbUrl = getDriveThumbnailUrl(cellValue);
-                        if (thumbUrl) {
-                            var img = document.createElement('img');
-                            img.src = thumbUrl;
-                            img.alt = "Image";
-                            img.style.width = "50px";
-                            img.style.height = "50px";
-                            td.appendChild(img);
-                            dataRow.appendChild(td);
-                            return;
-                        }
-                    }
-
-                    // Handle links
-                    if (String(cellValue).match(/^https?:\/\//i)) {
-                        var link = document.createElement('a');
-                        link.href = cellValue;
-                        link.target = '_blank';
-                        link.innerHTML = '<span class="material-symbols-outlined">link</span>';
-                        td.appendChild(link);
-                    } else {
-                        td.textContent = cellValue || '';
-                    }
-
-                    dataRow.appendChild(td);
-                });
-
-                tbody.appendChild(dataRow);
-                table.appendChild(tbody);
-
-                tableWrapper.appendChild(table);
-                tableSection.appendChild(tableWrapper);
-
-                cardContent.appendChild(tableSection);
-            }
-
-            // Show the overlay and card with animation
-            overlay.style.display = 'flex';
-            // Force reflow
-            void overlay.offsetWidth;
-
-            overlay.classList.add('show');
-            card.classList.add('show');
-
-            // Set up close handlers
-            document.getElementById('closeCard').onclick = closeDetailCard;
-            overlay.onclick = function (e) {
-                if (e.target === overlay) {
-                    closeDetailCard();
-                }
-            };
-
-            // Close on escape key
-            document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape') {
-                    closeDetailCard();
-                }
-            });
-        }
-
-        function closeDetailCard() {
-            var overlay = document.getElementById('detailCardOverlay');
-            var card = document.getElementById('detailCard');
-
-            // Remove show classes to trigger animations
-            overlay.classList.remove('show');
-            card.classList.remove('show');
-
-            // After animation completes, hide the overlay
             setTimeout(function () {
-                overlay.style.display = 'none';
-            }, 300);
+                loadAvailableWeeks();
+            }, 250);
+        };
+
+        function handleUserSearch() {
+            const searchTerm = this.value.toLowerCase();
+            const userOptions = document.querySelectorAll('.user-option');
+
+            userOptions.forEach(option => {
+                const label = option.querySelector('label').textContent.toLowerCase();
+                option.style.display = label.includes(searchTerm) ? 'block' : 'none';
+            });
         }
 
-        // -----------------------------------------------------------
-        // 14) Finally, initialize
-        // -----------------------------------------------------------
-        initParamPage();
-    </script>
-</body>
+        function handleUserCheckboxChange() {
+            updateUserFilterDisplay(true); // Trigger re-render
+        }
 
-</html>
+        function renderFilteredTable(data) {
+            const filteredData = applyUserFilter(data);
+            const tbody = document.getElementById('misTableBody');
+            tbody.innerHTML = '';
+
+            filteredData.forEach(function (row, index) {
+                const tr = document.createElement('tr');
+                const canEdit = (userRole === 'admin');
+                tr.innerHTML = `
+                      <td>${row.userId}</td>
+                      <td>${row.name}</td>
+                      <td>${row.currentWeekScoreWND}</td>
+                      <td>${row.totalTasks}</td>
+                      <td>${row.totalCompletedTasks}</td>
+                      <td>${row.wndScore}</td>
+                      <td><input type="number" class="commitment-input" data-user="${row.userId}" data-type="wnd" value="${row.nextCommitmentWND || ''}" onchange="markUnsaved()" ${!canEdit ? 'disabled' : ''}></td>
+                      <td>${row.currentWeekScoreWNDOT}</td>
+                      <td>${row.totalCompleteTasks}</td>
+                      <td>${row.onTimeDoneTasks}</td>
+                      <td>${row.wndotScore}</td>
+                      <td><input type="number" class="commitment-input" data-user="${row.userId}" data-type="wndot" value="${row.nextCommitmentWNDOT || ''}" onchange="markUnsaved()" ${!canEdit ? 'disabled' : ''}></td>
+                      <td><button class="view-btn" onclick="viewProcessDetails('${row.userId.replace(/'/g, "\\'")}', '${row.name.replace(/'/g, "\\'")}')">View</button></td>
+                  `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
