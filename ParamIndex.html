@@ -6,6 +6,7 @@
 
     #paramContainer {
         margin-top: 24px;
+        padding: 0 15px;
     }
 
     #paramContainer th {
@@ -27,8 +28,9 @@
 
     /* Container with less horizontal margin */
     #paramContainer .custom-container {
-        max-width: 90%;
+        max-width: 100%;
         margin: 0 auto;
+        padding: 0 15px;
     }
 
     /* Material Symbols configuration */
@@ -795,18 +797,6 @@
                 visibleIndex++;
             }
 
-            // Add Access Type column if role is user
-            // if (currentPageParams.role && currentPageParams.role.toLowerCase() === 'user') {
-            //     var thAccess = document.createElement('th');
-            //     thAccess.textContent = 'Access Type';
-
-            //     var accessResizer = document.createElement('div');
-            //     accessResizer.className = 'resizer';
-            //     accessResizer.addEventListener('mousedown', initResize);
-            //     thAccess.appendChild(accessResizer);
-
-            //     theadRow.appendChild(thAccess);
-            // }
         }
 
         // -----------------------------------------------------------
@@ -830,7 +820,7 @@
             if (dataArray.length === 0) {
                 var trNoData = document.createElement('tr');
                 var tdNoData = document.createElement('td');
-                var extraCols = (entryViewable ? 1 : 0) + (currentPageParams.role && currentPageParams.role.toLowerCase() === 'user' ? 1 : 0);
+                var extraCols = (entryViewable ? 1 : 0);
                 tdNoData.colSpan = displayedColumns.length + extraCols;
                 tdNoData.textContent = 'No records found.';
                 trNoData.appendChild(tdNoData);
@@ -919,14 +909,7 @@
                     tr.appendChild(td);
                 }
 
-                // // Add Access Type cell if role is user
-                // if (currentPageParams.role && currentPageParams.role.toLowerCase() === 'user') {
-                //     var tdAccess = document.createElement('td');
-                //     tdAccess.textContent = currentAccessType || 'Default';
-                //     tdAccess.style.fontWeight = 'bold';
-                //     tdAccess.style.color = (currentAccessType === 'Full' ? 'green' : 'orange');
-                //     tr.appendChild(tdAccess);
-                // }
+
 
                 tbody.appendChild(tr);
             }
