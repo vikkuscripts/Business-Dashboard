@@ -51,12 +51,27 @@
         position: absolute;
         top: 100%;
         left: 0;
-        z-index: 9999;
-        width: 100%;
-        max-height: 200px;
+        z-index: 99999;
+        min-width: 100%;
+        width: max-content;
+        max-width: 90vw;
+        max-height: 0;
         overflow-y: auto;
-        display: none;
-        /* hidden by default */
+        overflow-x: hidden;
+        border-radius: 0 0 12px 12px;
+        border: 1px solid #e0e0e0;
+        border-top: none;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        background: #fff;
+        opacity: 0;
+        transition: max-height 0.25s ease, opacity 0.2s ease;
+        pointer-events: none;
+    }
+
+    #paramContainer .autocomplete-suggestions.open {
+        max-height: 220px;
+        opacity: 1;
+        pointer-events: auto;
     }
 
     .autocomplete-suggestions .list-group-item {
@@ -64,15 +79,95 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        padding: 8px 14px;
+        font-size: 14px;
+        border: none;
+        border-bottom: 1px solid #f0f0f0;
     }
 
     .autocomplete-suggestions .list-group-item:hover {
-        background-color: #e7e7e7;
+        background-color: #f0f6fa;
     }
 
     h1 {
         font-size: 25px;
         margin-top: 10px;
+    }
+
+    /* Filter card container */
+    #paramContainer .col-md-3 {
+        padding: 0 8px;
+    }
+
+    #paramContainer .col-md-3 .filter-card {
+        background: #fff;
+        border: 1px solid #dde1e6;
+        border-radius: 12px;
+        padding: 10px 14px;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.08);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    #paramContainer .col-md-3 .filter-card:hover {
+        border-color: #1A7499;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(26, 116, 153, 0.15);
+    }
+
+    #paramContainer .col-md-3 .filter-card:focus-within {
+        border-color: #1A7499;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06), 0 0 0 3px rgba(26, 116, 153, 0.12);
+    }
+
+    #paramContainer .col-md-3 .filter-card .form-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #8a9bb0;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 2px;
+    }
+
+    h1 {
+        font-size: 25px;
+        margin-top: 10px;
+        margin-bottom: 15px;
+    }
+
+    /* Style the inputs inside filter cards */
+    #paramContainer .filter-card input.form-control {
+        border: none !important;
+        padding: 0 !important;
+        height: auto;
+        font-size: 15px;
+        font-weight: 700;
+        color: #1e293b;
+        background: transparent;
+        box-shadow: none !important;
+        outline: none;
+    }
+
+    #paramContainer .filter-card input.form-control::placeholder {
+        color: #1e293b;
+        font-weight: 700;
+        opacity: 1;
+    }
+
+    /* Dropdown arrow for SearchFilter */
+    #paramContainer .autocomplete-wrapper {
+        display: flex;
+        align-items: center;
+    }
+
+    #paramContainer .autocomplete-wrapper input.form-control {
+        flex: 1;
+    }
+
+    #paramContainer .autocomplete-wrapper .dropdown-arrow {
+        font-size: 20px;
+        color: #64748b;
+        pointer-events: none;
+        margin-left: 4px;
+        transition: transform 0.3s ease;
     }
 
     /* Apply a visible border and border-radius to all form-control inputs in the param container */
@@ -81,9 +176,48 @@
         border-radius: 0.25rem;
     }
 
+    /* Enhanced action buttons */
+    .action-btn {
+        padding: 8px 18px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 14px;
+        letter-spacing: 0.3px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: none;
+        cursor: pointer;
+    }
+
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .action-btn:active {
+        transform: translateY(1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
     #resetBtn {
         background-color: #F47174;
         color: white;
+    }
+
+    #resetBtn:hover {
+        background-color: #e05e61;
+    }
+
+    #refreshBtn {
+        background-color: #059669;
+        color: white;
+    }
+
+    #refreshBtn:hover {
+        background-color: #065f46 ;
     }
 
     /* Custom styling for dynamically created buttons */
@@ -362,6 +496,52 @@
         background-color: #fff;
         font-weight: 400;
     }
+
+
+
+    /* Filter toggle button - circular */
+    .filter-toggle-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        background-color: #1A7499;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .filter-toggle-btn:hover {
+        background-color: #155d7a;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .filter-toggle-btn .toggle-arrow {
+        font-size: 24px;
+        color: #ffffff;
+        transition: transform 0.3s ease;
+    }
+
+    .filter-toggle-btn.collapsed .toggle-arrow {
+        transform: rotate(180deg);
+    }
+
+    /* Collapsible filter content */
+    .filter-collapsible {
+        max-height: 1000px;
+        overflow: visible;
+        transition: max-height 0.4s ease, opacity 0.3s ease;
+        opacity: 1;
+    }
+
+    .filter-collapsible.collapsed {
+        max-height: 0;
+        opacity: 0;
+        overflow: hidden;
+        pointer-events: none;
+    }
 </style>
 </head>
 
@@ -373,25 +553,33 @@
                 <h1 class="fw-bold" id="pageTitle">
                     <?!= pageTitle ?>
                 </h1>
+                <!-- Filter Toggle Button -->
+                <button id="filterToggleBtn" class="filter-toggle-btn" onclick="toggleFilters()" title="Toggle Filters"
+                    style="position: absolute; right: 0;">
+                    <span class="material-symbols-outlined toggle-arrow">keyboard_arrow_down</span>
+                </button>
             </div>
             <hr style="height: 3px; background-color: #000; border: none;" />
             <!-- 2) Sticky filter bar ... -->
             <div id="filterBar" style="position: sticky; top: 0; z-index: 999; background: #fff; padding: 10px;">
-                <div class="row" id="filters"></div>
-                <!-- Add a row that places Reset on the left, custom buttons on the right -->
-                <div class="d-flex justify-content-between mb-3">
-                    <div class="d-flex gap-2">
-                        <button id="resetBtn" class="btn btn-secondary mb-3">Reset Filters</button>
-                        <button id="refreshBtn" class="btn btn-primary mb-3"
-                            style="background-color: green; border-color: black;">
-                            <i class="material-symbols-outlined"
-                                style="vertical-align: middle; font-size: 18px;">refresh</i> Refresh
-                        </button>
-                        <span id="lastRefreshedText" class="align-self-center ms-2 text-muted"
-                            style="padding-bottom: 17px">Refreshed now</span>
+                <div class="filter-collapsible" id="filterCollapsible">
+                    <div class="row" id="filters"></div>
+                    <!-- Add a row that places Reset on the left, custom buttons on the right -->
+                    <div class="d-flex justify-content-between mb-3 mt-3 align-items-center">
+                        <div class="d-flex gap-3 align-items-center">
+                            <button id="resetBtn" class="action-btn">
+                                <span class="material-symbols-outlined" style="font-size: 18px;">filter_alt_off</span>
+                                Reset Filters
+                            </button>
+                            <button id="refreshBtn" class="action-btn">
+                                <span class="material-symbols-outlined" style="font-size: 18px;">refresh</span> Refresh
+                            </button>
+                            <span id="lastRefreshedText" class="text-muted"
+                                style="font-size: 13px; font-weight: 500;">Refreshed now</span>
+                        </div>
+                        <!-- We'll populate custom buttons here -->
+                        <div id="customButtonsContainer" class="d-flex gap-2"></div>
                     </div>
-                    <!-- We'll populate custom buttons here -->
-                    <div id="customButtonsContainer" class="d-flex gap-2"></div>
                 </div>
             </div>
             <!-- NEW: Metrics Container (positioned between filter bar and table) -->
@@ -569,6 +757,20 @@
             // Add this line to calculate table height
             adjustTableHeight();
 
+            // Filter toggle functionality
+            window.toggleFilters = function () {
+                var collapsible = document.getElementById('filterCollapsible');
+                var toggleBtn = document.getElementById('filterToggleBtn');
+
+                collapsible.classList.toggle('collapsed');
+                toggleBtn.classList.toggle('collapsed');
+
+                // Recalculate table height after transition
+                setTimeout(function () {
+                    adjustTableHeight();
+                }, 400);
+            };
+
             // If you also had some `document.addEventListener('click', ...)` code, keep it here:
             document.addEventListener('click', function (e) {
                 for (var i = 0; i < filterControls.length; i++) {
@@ -613,10 +815,14 @@
                 var colDiv = document.createElement('div');
                 colDiv.className = 'col-md-3 mb-3';
 
+                // Create filter card container
+                var filterCard = document.createElement('div');
+                filterCard.className = 'filter-card';
+
                 var label = document.createElement('label');
                 label.className = 'form-label';
                 label.textContent = headers[i];
-                colDiv.appendChild(label);
+                filterCard.appendChild(label);
 
                 // "Search" -> standard input
                 if (hasSearch) {
@@ -625,7 +831,7 @@
                     input.className = 'form-control';
                     input.placeholder = 'Type to search...';
                     input.addEventListener('input', onFilterChange);
-                    colDiv.appendChild(input);
+                    filterCard.appendChild(input);
 
                     filterControls[i] = {
                         type: 'Search',
@@ -633,26 +839,29 @@
                     };
                 }
 
-                // "SearchFilter" -> auto‐complete filter
+                // "SearchFilter" -> auto-complete filter
                 if (hasSearchFilter) {
-                    // If we *also* have "Search" on the same column, we might want to only do one or the other.
-                    // But let's allow them if you want. Or skip "SearchFilter" if "Search" is present.
-                    // For this example, I'll show them as separate—so you can choose.
-                    // (But realistically you'd pick one approach or the other.)
                     var wrapper = document.createElement('div');
                     wrapper.className = 'autocomplete-wrapper';
 
                     var inputSF = document.createElement('input');
                     inputSF.type = 'text';
                     inputSF.className = 'form-control';
-                    inputSF.placeholder = 'Click to choose...';
+                    inputSF.placeholder = 'All';
+
+                    // Add dropdown arrow icon
+                    var arrowIcon = document.createElement('span');
+                    arrowIcon.className = 'material-symbols-outlined dropdown-arrow';
+                    arrowIcon.textContent = 'expand_more';
+
                     wrapper.appendChild(inputSF);
+                    wrapper.appendChild(arrowIcon);
 
                     var suggestionsDiv = document.createElement('div');
                     suggestionsDiv.className = 'autocomplete-suggestions list-group';
                     wrapper.appendChild(suggestionsDiv);
 
-                    colDiv.appendChild(wrapper);
+                    filterCard.appendChild(wrapper);
 
                     // Compute full unique values from the entire dataset for this column.
                     var uniqueMap = {};
@@ -669,34 +878,37 @@
                         control: inputSF,
                         suggestionsContainer: suggestionsDiv,
                         fullUniqueVals: fullUniqueVals,
-                        selectedValue: '',
+                        selectedValues: [],
                         wrapper: wrapper
                     };
 
                     (function (index) {
                         inputSF.addEventListener('focus', function () {
-                            // Clear any previous selection and text.
+                            // Clear text for typing, keep selections active implicitly
                             this.value = "";
-                            filterControls[index].selectedValue = "";
                             openDropdown(index);
                         });
                         inputSF.addEventListener('click', function (e) {
-                            if (filterControls[index].suggestionsContainer.style.display !== 'block') {
+                            if (!filterControls[index].suggestionsContainer.classList.contains('open')) {
                                 openDropdown(index);
                             }
                             e.stopPropagation();
                         });
                         inputSF.addEventListener('input', function () {
-                            filterControls[index].selectedValue = "";
-                            if (filterControls[index].suggestionsContainer.style.display !== 'block') {
+                            if (!filterControls[index].suggestionsContainer.classList.contains('open')) {
                                 openDropdown(index);
                             }
                             updateAutocompleteSuggestions(index, this.value);
                         });
                         inputSF.addEventListener('blur', function () {
                             setTimeout(function () {
-                                if (!filterControls[index].selectedValue) {
-                                    filterControls[index].control.value = "";
+                                var fObj = filterControls[index];
+                                if (!fObj) return;
+                                if (fObj.selectedValues.length === 0) {
+                                    fObj.control.value = "";
+                                    fObj.control.placeholder = 'All';
+                                } else {
+                                    fObj.control.value = fObj.selectedValues.join(', ');
                                 }
                                 closeDropdown(index);
                             }, 200);
@@ -725,7 +937,7 @@
 
                     rowDiv.appendChild(startInput);
                     rowDiv.appendChild(endInput);
-                    colDiv.appendChild(rowDiv);
+                    filterCard.appendChild(rowDiv);
 
                     // We'll store them in the same filterControls object.  
                     // CAREFUL: If we already set filterControls[i] to "Search" or "SearchFilter," 
@@ -742,6 +954,7 @@
                     }
                 }
 
+                colDiv.appendChild(filterCard);
                 filtersContainer.appendChild(colDiv);
             }
 
@@ -1005,74 +1218,80 @@
             updateSearchFilterDropdowns();
         }
 
-        function applyFilters() {
-            filteredData = data.filter(function (row) {
-                // For each column that has filter tokens
-                for (var i = 0; i < columnIdentifiers.length; i++) {
-                    var tokenArr = filterTypes[i];
-                    if (!tokenArr || tokenArr.length === 0) continue;
+        function isRowMatch(row, excludeCol) {
+            // For each column that has filter tokens
+            for (var i = 0; i < columnIdentifiers.length; i++) {
+                if (i === excludeCol) continue;
 
-                    // If it has "Search" or "SearchFilter"
-                    var hasSearch = tokenArr.includes('Search');
-                    var hasSearchFilter = tokenArr.includes('SearchFilter');
-                    var hasDateRange = tokenArr.includes('DateRange');
+                var tokenArr = filterTypes[i];
+                if (!tokenArr || tokenArr.length === 0) continue;
 
-                    var cellVal = row[i] || '';
+                // If it has "Search" or "SearchFilter"
+                var hasSearch = tokenArr.includes('Search');
+                var hasSearchFilter = tokenArr.includes('SearchFilter');
+                var hasDateRange = tokenArr.includes('DateRange');
 
-                    // Check if we had assigned filterControls[i]
-                    var fObj = filterControls[i];
-                    if (!fObj) {
-                        // But maybe we do have dateRange in the same object with Search
-                        if (fObj && fObj.dateRange) {
-                            // We'll handle that below
-                        }
-                        continue;
-                    }
+                var cellVal = row[i] || '';
 
-                    // 1) “Search” text filter
-                    if (hasSearch && fObj.type === 'Search') {
-                        var searchVal = fObj.control.value.trim().toLowerCase();
-                        if (searchVal && String(cellVal).toLowerCase().indexOf(searchVal) === -1) {
-                            return false;
-                        }
-                    }
+                // Check if we had assigned filterControls[i]
+                var fObj = filterControls[i];
+                if (!fObj) {
+                    continue;
+                }
 
-                    // 2) “SearchFilter” auto‐complete
-                    if (hasSearchFilter && fObj.type === 'SearchFilter') {
-                        var selected = fObj.selectedValue;
-                        if (selected && String(cellVal).toLowerCase() !== selected.toLowerCase()) {
-                            return false;
-                        }
-                    }
-
-                    // 3) “DateRange”
-                    // Possibly it’s stored in fObj if it has `type === 'DateRange'`.
-                    // Or if we had both “Search” & “DateRange” in the same column, 
-                    // we might have put dateRange sub‐object in fObj. Let’s check both:
-                    if (hasDateRange) {
-                        var startVal, endVal;
-                        if (fObj.type === 'DateRange') {
-                            startVal = fObj.start.value;
-                            endVal = fObj.end.value;
-                        } else if (fObj.dateRange) {
-                            startVal = fObj.dateRange.start.value;
-                            endVal = fObj.dateRange.end.value;
-                        }
-
-                        if (startVal || endVal) {
-                            var cellDate = new Date(cellVal);
-                            if (isNaN(cellDate.getTime())) {
-                                // If the cell is not a valid date, exclude
-                                return false;
-                            }
-                            var filterStart = parseDateInput(startVal);
-                            var filterEnd = parseDateInput(endVal);
-                            if (filterStart && cellDate < filterStart) return false;
-                            if (filterEnd && cellDate > filterEnd) return false;
-                        }
+                // 1) “Search” text filter
+                if (hasSearch && fObj.type === 'Search') {
+                    var searchVal = fObj.control.value.trim().toLowerCase();
+                    if (searchVal && String(cellVal).toLowerCase().indexOf(searchVal) === -1) {
+                        return false;
                     }
                 }
-                return true;
+
+                // 2) “SearchFilter” auto‐complete
+                if (hasSearchFilter && fObj.type === 'SearchFilter') {
+                    var selectedArr = fObj.selectedValues;
+                    if (selectedArr && selectedArr.length > 0) {
+                        var cellLower = String(cellVal).toLowerCase();
+                        var match = false;
+                        for (var c = 0; c < selectedArr.length; c++) {
+                            if (cellLower === selectedArr[c].toLowerCase()) {
+                                match = true;
+                                break;
+                            }
+                        }
+                        if (!match) return false;
+                    }
+                }
+
+                // 3) “DateRange”
+                if (hasDateRange) {
+                    var startVal, endVal;
+                    if (fObj.type === 'DateRange') {
+                        startVal = fObj.start.value;
+                        endVal = fObj.end.value;
+                    } else if (fObj.dateRange) {
+                        startVal = fObj.dateRange.start.value;
+                        endVal = fObj.dateRange.end.value;
+                    }
+
+                    if (startVal || endVal) {
+                        var cellDate = new Date(cellVal);
+                        if (isNaN(cellDate.getTime())) {
+                            return false;
+                        }
+                        var filterStart = parseDateInput(startVal);
+                        var filterEnd = parseDateInput(endVal);
+                        if (filterStart && cellDate < filterStart) return false;
+                        if (filterEnd && cellDate > filterEnd) return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function applyFilters() {
+            filteredData = data.filter(function (row) {
+                return isRowMatch(row, -1);
             });
 
             // After the filter is done
@@ -1088,7 +1307,7 @@
                 if (!tokenArr || !tokenArr.includes('SearchFilter')) continue;
                 var fObj = filterControls[i];
                 if (!fObj || fObj.type !== 'SearchFilter') continue;
-                if (fObj.suggestionsContainer.style.display === 'block') {
+                if (fObj.suggestionsContainer.classList.contains('open')) {
                     var currentText = fObj.control.value || '';
                     updateAutocompleteSuggestions(i, currentText);
                 }
@@ -1110,7 +1329,7 @@
                 // If the column has “SearchFilter”
                 if (fObj.type === 'SearchFilter') {
                     fObj.control.value = '';
-                    fObj.selectedValue = '';
+                    fObj.selectedValues = [];
                     closeDropdown(i);
                 }
                 // If date range
@@ -1138,12 +1357,18 @@
             if (!fObj) return;
             var currentText = fObj.control.value || '';
             updateAutocompleteSuggestions(index, currentText);
-            fObj.suggestionsContainer.style.display = 'block';
+            fObj.suggestionsContainer.classList.add('open');
+            if (fObj.wrapper) {
+                fObj.wrapper.style.zIndex = '99999';
+            }
         }
         function closeDropdown(index) {
             var fObj = filterControls[index];
             if (!fObj) return;
-            fObj.suggestionsContainer.style.display = 'none';
+            fObj.suggestionsContainer.classList.remove('open');
+            if (fObj.wrapper) {
+                fObj.wrapper.style.zIndex = '';
+            }
         }
 
         // -----------------------------------------------------------
@@ -1153,30 +1378,54 @@
             var fObj = filterControls[index];
             if (!fObj) return;
             var container = fObj.suggestionsContainer;
-            var vals = fObj.fullUniqueVals || [];
 
-            // Build a count map from *filteredData* for that column
+            // Generate cross filtered data (ignoring this column's own filter)
+            var crossFilteredData = data.filter(function (row) {
+                return isRowMatch(row, index);
+            });
+
+            // Build a count map from crossFilteredData for that column
             var countMap = {};
-            for (var r = 0; r < filteredData.length; r++) {
-                var val = filteredData[r][index];
+            for (var r = 0; r < crossFilteredData.length; r++) {
+                var val = crossFilteredData[r][index];
                 if (val !== undefined && val !== '') {
                     countMap[val] = (countMap[val] || 0) + 1;
                 }
             }
-            // Only show values that match searchTerm (if typed) & are present in filtered table
-            var filteredVals = vals.filter(function (v) {
-                return v.toLowerCase().indexOf(searchTerm.toLowerCase()) !== -1 && countMap[v] > 0;
+
+            var validUniqueVals = Object.keys(countMap);
+
+            // Include previously selected values so they can be unselected
+            if (fObj.selectedValues) {
+                fObj.selectedValues.forEach(function (sel) {
+                    if (!(sel in countMap)) {
+                        countMap[sel] = 0;
+                        if (!validUniqueVals.includes(sel)) {
+                            validUniqueVals.push(sel);
+                        }
+                    }
+                });
+            }
+
+            validUniqueVals.sort();
+
+            // Only show values that match searchTerm (if typed)
+            var filteredVals = validUniqueVals.filter(function (v) {
+                return v.toLowerCase().indexOf(searchTerm.toLowerCase()) !== -1;
             });
 
             container.innerHTML = '';
 
-            // "Select All"
+            // "Select All" / "Clear All"
             var selectAllDiv = document.createElement('div');
             selectAllDiv.className = 'list-group-item list-group-item-action';
-            selectAllDiv.textContent = "Select All";
-            selectAllDiv.addEventListener('click', function (e) {
+            selectAllDiv.style.fontWeight = 'bold';
+            selectAllDiv.textContent = fObj.selectedValues.length > 0 ? "Clear Selections" : "Select All";
+            selectAllDiv.addEventListener('mousedown', function (e) {
+                e.preventDefault(); // Prevent blur on input
+                fObj.selectedValues = [];
                 fObj.control.value = "";
-                fObj.selectedValue = "";
+                fObj.control.placeholder = 'All';
                 closeDropdown(index);
                 onFilterChange();
                 e.stopPropagation();
@@ -1185,20 +1434,38 @@
 
             filteredVals.forEach(function (item) {
                 var count = countMap[item] || 0;
+                var isSelected = fObj.selectedValues.includes(item);
+
                 var itemDiv = document.createElement('div');
                 itemDiv.className = 'list-group-item list-group-item-action';
+                itemDiv.style.display = 'flex';
+                itemDiv.style.alignItems = 'center';
+
+                var checkIcon = document.createElement('span');
+                checkIcon.className = 'material-symbols-outlined';
+                checkIcon.style.marginRight = '8px';
+                checkIcon.style.fontSize = '20px';
+                checkIcon.textContent = isSelected ? 'check_box' : 'check_box_outline_blank';
+                checkIcon.style.color = isSelected ? 'var(--primary-color, #1A7499)' : '#888';
 
                 var leftSpan = document.createElement('span');
+                leftSpan.style.flex = '1';
                 leftSpan.textContent = item;
+
                 var rightSpan = document.createElement('span');
                 rightSpan.textContent = "(" + count + ")";
+
+                itemDiv.appendChild(checkIcon);
                 itemDiv.appendChild(leftSpan);
                 itemDiv.appendChild(rightSpan);
 
-                itemDiv.addEventListener('click', function (e) {
-                    fObj.control.value = item;
-                    fObj.selectedValue = item;
-                    closeDropdown(index);
+                itemDiv.addEventListener('mousedown', function (e) {
+                    e.preventDefault(); // Prevent blur
+                    if (isSelected) {
+                        fObj.selectedValues = fObj.selectedValues.filter(function (v) { return v !== item; });
+                    } else {
+                        fObj.selectedValues.push(item);
+                    }
                     onFilterChange();
                     e.stopPropagation();
                 });
