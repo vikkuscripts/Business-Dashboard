@@ -1483,13 +1483,217 @@
             font-size: 10px;
         }
 
-        .footer-btn i {
-            font-size: 13px;
-            color: inherit;
+        /* Enhanced action buttons */
+        .action-btn {
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            letter-spacing: 0.3px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .action-btn:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #resetBtn,
+        #resetAllFilters,
+        #resetScoreBtn {
+            background-color: #F47174;
+            color: white;
+            box-shadow: none !important;
+        }
+
+        #resetBtn:hover,
+        #resetAllFilters:hover,
+        #resetScoreBtn:hover {
+            background-color: #e05e61;
+            transform: none !important;
+        }
+
+        #refreshBtn,
+        #refreshDashboardBtn,
+        #refreshScoreBtn {
+            background-color: #059669;
+            color: white;
+            box-shadow: none !important;
+        }
+
+        #refreshBtn:hover,
+        #refreshDashboardBtn:hover,
+        #refreshScoreBtn:hover {
+            background-color: #065f46;
+            transform: none !important;
+        }
+
+        /* Searchable dropdown styles */
+        .autocomplete-wrapper {
+            position: relative;
+        }
+
+        .autocomplete-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            z-index: 99999;
+            min-width: 100%;
+            width: max-content;
+            max-width: 90vw;
+            max-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            border-radius: 0 0 12px 12px;
+            border: 1px solid #e0e0e0;
+            border-top: none;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            background: #fff;
+            opacity: 0;
+            transition: max-height 0.25s ease, opacity 0.2s ease;
+            pointer-events: none;
+        }
+
+        .autocomplete-suggestions.open {
+            max-height: 220px;
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .autocomplete-suggestions .list-group-item {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 14px;
+            font-size: 14px;
+            border: none;
+            border-bottom: 1px solid #f0f0f0;
+            background-color: white;
+            /* Ensure visible background */
+        }
+
+        .autocomplete-suggestions .list-group-item:hover {
+            background-color: #f0f6fa;
+        }
+
+        /* Filter card styles matching ParamIndex.html */
+        .filter-card {
+            background: #fff;
+            border: 1px solid #dde1e6;
+            border-radius: 12px;
+            padding: 10px 14px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.08);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .filter-card:hover {
+            border-color: #1A7499;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(26, 116, 153, 0.15);
+        }
+
+        .filter-card:focus-within {
+            border-color: #1A7499;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06), 0 0 0 3px rgba(26, 116, 153, 0.12);
+        }
+
+        .filter-card .form-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #8a9bb0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+
+        .filter-card input.form-control,
+        .filter-card select.form-select {
+            border: none !important;
+            padding: 0 !important;
+            height: auto;
+            font-size: 15px;
+            font-weight: 700;
+            color: #1e293b;
+            background: transparent;
+            box-shadow: none !important;
+            outline: none;
+        }
+
+        .filter-card input.form-control::placeholder {
+            color: #1e293b;
+            font-weight: 700;
+            opacity: 1;
+        }
+
+        .autocomplete-wrapper {
+            display: flex;
+            align-items: center;
+        }
+
+        .autocomplete-wrapper input.form-control {
+            flex: 1;
+            border: none !important;
+            box-shadow: none !important;
+            background: transparent;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .autocomplete-wrapper .dropdown-arrow {
+            font-size: 20px;
+            color: #64748b;
+            pointer-events: none;
+            margin-left: 4px;
+            transition: transform 0.3s ease;
+        }
+
+        .selected-items-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 4px;
+            /* Space between tags and input */
+        }
+
+        .selected-item-tag {
+            display: inline-flex;
+            align-items: center;
+            background-color: #e0f2fe;
+            /* Light blue background */
+            color: #0369a1;
+            /* Darker blue text */
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 12px;
+        }
+
+        .selected-item-tag .remove-tag {
+            margin-left: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .selected-item-tag .remove-tag:hover {
+            color: #b91c1c;
+            /* Red on hover */
         }
     </style>
-
-
 
 </head>
 
@@ -2509,41 +2713,82 @@
                   </section>
 
                   <section class="container py-3">
-                      <button type="button" class="btn btn-secondary mb-3 d-none" style="margin-top: 12px;" id="resetFilters">Reset Filters</button>
-                      <div class="row filter-section" style="margin-top: 8px;">
-                          <div class="col-md-4 mb-3">
-                              <label for="doerFilter" class="form-label">Filter by Doer Name:</label>
-                              <select id="doerFilter" style='border: none; box-shadow: 0 0 4px rgba(31, 48, 94, 0.4);' class="form-select">
-                                  <option value="">All</option>
-                              </select>
-                          </div>
-                          <div class="col-md-4 mb-3">
-                              <label for="processFilter" class="form-label">Filter by Process Name:</label>
-                              <select id="processFilter" style='border: none; box-shadow: 0 0 4px rgba(31, 48, 94, 0.4);' class="form-select">
-                                  <option value="">All</option>
-                              </select>
-                          </div>
-                          <div class="col-md-4 mb-3">
-                              <label for="statusFilter" class="form-label">Filter by Status:</label>
-                              <select id="statusFilter" style='border: none; box-shadow: 0 0 4px rgba(31, 48, 94, 0.4);' class="form-select">
-                                  <option value="">All</option>
-                              </select>
+                      <div class="filter-collapsible mb-3" id="mainDashboardFilters">
+                          <div class="row align-items-start g-2">
+                              <!-- Doer Filter -->
+                              <div class="col-md-2">
+                                <div class="filter-card">
+                                  <label class="form-label">Doer Name:</label>
+                                  <div class="autocomplete-wrapper mb-1">
+                                      <input type="text" id="doerFilter" class="form-control" placeholder="All" autocomplete="off">
+                                      <span class="material-symbols-outlined dropdown-arrow">expand_more</span>
+                                      <div class="autocomplete-suggestions list-group" id="doerSuggestions"></div>
+                                  </div>
+                                  <div id="doerSelectedTags" class="selected-items-container mt-1"></div>
+                                </div>
+                              </div>
+                              
+                              <!-- Process Filter -->
+                              <div class="col-md-2">
+                                <div class="filter-card">
+                                  <label class="form-label">Process Name:</label>
+                                  <div class="autocomplete-wrapper mb-1">
+                                      <input type="text" id="processFilter" class="form-control" placeholder="All" autocomplete="off">
+                                      <span class="material-symbols-outlined dropdown-arrow">expand_more</span>
+                                      <div class="autocomplete-suggestions list-group" id="processSuggestions"></div>
+                                  </div>
+                                  <div id="processSelectedTags" class="selected-items-container mt-1"></div>
+                                </div>
+                              </div>
+                              
+                              <!-- Status Filter -->
+                              <div class="col-md-2">
+                                <div class="filter-card">
+                                  <label class="form-label">Status:</label>
+                                  <div class="autocomplete-wrapper mb-1">
+                                      <input type="text" id="statusFilter" class="form-control" placeholder="All" autocomplete="off">
+                                      <span class="material-symbols-outlined dropdown-arrow">expand_more</span>
+                                      <div class="autocomplete-suggestions list-group" id="statusSuggestions"></div>
+                                  </div>
+                                  <div id="statusSelectedTags" class="selected-items-container mt-1"></div>
+                                </div>
+                              </div>
+
+                              <!-- Start Date -->
+                              <div class="col-md-2">
+                                <div class="filter-card">
+                                  <label for="startDate" class="form-label">Start Date:</label>
+                                  <div class="autocomplete-wrapper mb-1">
+                                    <input type="date" id="startDate" class="form-control">
+                                  </div>
+                                  <div class="selected-items-container mt-1"></div>
+                                </div>
+                              </div>
+
+                              <!-- End Date -->
+                              <div class="col-md-2">
+                                <div class="filter-card">
+                                  <label for="endDate" class="form-label">End Date:</label>
+                                  <div class="autocomplete-wrapper mb-1">
+                                    <input type="date" id="endDate" class="form-control">
+                                  </div>
+                                  <div class="selected-items-container mt-1"></div>
+                                </div>
+                              </div>
+
+                              <!-- Actions -->
+                              <div class="col-md-2 d-flex justify-content-end align-items-center" style="padding-top: 15px;">
+                                <div class="btn-group w-100 h-100 shadow-sm" style="border-radius: 12px; overflow: hidden; min-height: 56px;">
+                                  <button type="button" id="resetAllFilters" class="action-btn w-50 m-0 border-0" style="border-radius: 0; justify-content: center; ">
+                                      <span class="material-symbols-outlined" style="font-size: 18px;">filter_alt_off</span> Reset
+                                  </button>
+                                  <button type="button" id="refreshDashboardBtn" class="action-btn w-50 m-0 border-0" style="border-radius: 0; justify-content: center; ">
+                                    <span class="material-symbols-outlined" style="font-size: 18px;">refresh</span> Refresh
+                                  </button>
+                                </div>
+                              </div>
                           </div>
                       </div>
-                      <div class="row filter-section">
-                          <div class="col-md-4 mb-3">
-                              <label for="startDate" class="form-label">Start Date:</label>
-                              <input type="date" style='border: none; box-shadow: 0 0 4px rgba(31, 48, 94, 0.4);' id="startDate" class="form-control mb-2">
-                          </div>
-                          <div class="col-md-4 mb-3">
-                              <label for="endDate" class="form-label">End Date:</label>
-                              <input type="date" id="endDate" style='border: none; box-shadow: 0 0 4px rgba(31, 48, 94, 0.4);' class="form-control mb-2">
-                          </div>
-                          <div class="col-md-4 d-flex flex-row gap-3" style="margin-top: 25px; height: 50%;">
-                              <button type="button" id="applyDateRange" class="btn btn-primary">Apply</button>
-                              <button type="button" id="resetDateRange" class="btn btn-secondary">Reset Date Range</button>
-                              <button type="button" id="resetAllFilters" class="btn btn-danger">Reset All Filters</button>
-                          </div>
                   </section>
 
                     
@@ -2803,58 +3048,187 @@
                 const doerFilter = document.getElementById('doerFilter');
                 const processFilter = document.getElementById('processFilter');
                 const statusFilter = document.getElementById('statusFilter');
-                const resetButton = document.getElementById('resetFilters');
-                const resetDateRangeButton = document.getElementById('resetDateRange');
-                const resetAllFiltersButton = document.getElementById('resetAllFilters');
+                const resetButton = document.getElementById('resetAllFilters');
+                const refreshButton = document.getElementById('refreshDashboardBtn');
                 const tableBody = document.getElementById('data-table');
 
-                // Clear previous options
-                doerFilter.innerHTML = '<option value="">All</option>';
-                processFilter.innerHTML = '<option value="">All</option>';
-                statusFilter.innerHTML = '<option value="">All</option>';
+                let selectedDoers = [];
+                let selectedProcesses = [];
+                let selectedStatuses = [];
 
-                // Extract unique values for filters
-                const doerNames = [...new Set(data.slice(1).map(row => row[1]))];
-                const processNames = [...new Set(data.slice(1).map(row => row[2]))];
-                const statuses = [...new Set(data.slice(1).map(row => row[6]))];
+                // Extract unique values for filters initially
+                const fullDoersList = [...new Set(data.slice(1).map(row => row[1]))].sort();
+                const fullProcessesList = [...new Set(data.slice(1).map(row => row[2]))].sort();
+                const fullStatusesList = [...new Set(data.slice(1).map(row => row[6]))].sort();
 
-                // Populate filter dropdowns
-                doerNames.forEach(name => {
-                    const option = document.createElement('option');
-                    option.value = name;
-                    option.textContent = name;
-                    doerFilter.appendChild(option);
-                });
-                processNames.forEach(name => {
-                    const option = document.createElement('option');
-                    option.value = name;
-                    option.textContent = name;
-                    processFilter.appendChild(option);
-                });
-                statuses.forEach(status => {
-                    const option = document.createElement('option');
-                    option.value = status;
-                    option.textContent = status;
-                    statusFilter.appendChild(option);
+                function setupDashboardAutocomplete(inputId, suggestionsId, tagsId, selectedArray, fullList, columnIndex) {
+                    const inputEl = document.getElementById(inputId);
+                    const suggestionsEl = document.getElementById(suggestionsId);
+                    const tagsEl = document.getElementById(tagsId);
+
+                    inputEl.addEventListener('focus', function () {
+                        this.value = '';
+                        renderDashboardSuggestions(inputEl, suggestionsEl, tagsEl, selectedArray, fullList, columnIndex, '');
+                        suggestionsEl.classList.add('open');
+                        inputEl.parentElement.style.zIndex = '99999';
+                    });
+
+                    inputEl.addEventListener('input', function () {
+                        renderDashboardSuggestions(inputEl, suggestionsEl, tagsEl, selectedArray, fullList, columnIndex, this.value);
+                        if (!suggestionsEl.classList.contains('open')) {
+                            suggestionsEl.classList.add('open');
+                            inputEl.parentElement.style.zIndex = '99999';
+                        }
+                    });
+
+                    inputEl.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        if (!suggestionsEl.classList.contains('open')) {
+                            this.value = '';
+                            renderDashboardSuggestions(inputEl, suggestionsEl, tagsEl, selectedArray, fullList, columnIndex, '');
+                            suggestionsEl.classList.add('open');
+                            inputEl.parentElement.style.zIndex = '99999';
+                        }
+                    });
+
+                    inputEl.addEventListener('blur', function () {
+                        setTimeout(() => {
+                            suggestionsEl.classList.remove('open');
+                            inputEl.parentElement.style.zIndex = '';
+                            if (selectedArray.length === 0) {
+                                inputEl.value = '';
+                                inputEl.placeholder = 'All';
+                            } else {
+                                inputEl.value = selectedArray.join(', ');
+                            }
+                        }, 200);
+                    });
+                }
+
+                function renderDashboardSuggestions(inputEl, suggestionsEl, tagsEl, selectedArray, fullList, columnIndex, searchTerm) {
+                    // Filter cross-data to see what options are actually available
+                    const crossFilteredData = data.slice(1).filter(row => {
+                        const startVal = document.getElementById('startDate').value;
+                        const endVal = document.getElementById('endDate').value;
+                        let start = startVal ? new Date(startVal) : null;
+                        let end = endVal ? new Date(endVal) : null;
+                        if (start) { start = new Date(start.getTime() - 86400000); start.setHours(0, 0, 0, 0); }
+                        if (end) end.setHours(23, 59, 59, 999);
+
+                        const rowDate = parseDashboardDate(row[3]);
+                        const inRange = (!start || rowDate >= start) && (!end || rowDate <= end);
+
+                        const doerMatch = (columnIndex === 1) ? true : (selectedDoers.length === 0 || selectedDoers.includes(row[1]));
+                        const processMatch = (columnIndex === 2) ? true : (selectedProcesses.length === 0 || selectedProcesses.includes(row[2]));
+                        const statusMatch = (columnIndex === 6) ? true : (selectedStatuses.length === 0 || selectedStatuses.includes(row[6]));
+
+                        return doerMatch && processMatch && statusMatch && inRange && (loggedInRole !== 'user' || row[0] === loggedInUser);
+                    });
+
+                    const countMap = {};
+                    crossFilteredData.forEach(row => {
+                        const val = row[columnIndex];
+                        if (val !== undefined && val !== '') {
+                            countMap[val] = (countMap[val] || 0) + 1;
+                        }
+                    });
+
+                    const validUniqueVals = Object.keys(countMap);
+
+                    selectedArray.forEach(sel => {
+                        if (!(sel in countMap)) {
+                            countMap[sel] = 0;
+                            if (!validUniqueVals.includes(sel)) validUniqueVals.push(sel);
+                        }
+                    });
+
+                    validUniqueVals.sort();
+                    const filteredVals = validUniqueVals.filter(v => v.toLowerCase().includes(searchTerm.toLowerCase()));
+
+                    suggestionsEl.innerHTML = '';
+
+                    const selectAllDiv = document.createElement('div');
+                    selectAllDiv.className = 'list-group-item list-group-item-action';
+                    selectAllDiv.style.fontWeight = 'bold';
+                    selectAllDiv.textContent = selectedArray.length > 0 ? "Clear Selections" : "Select All";
+                    selectAllDiv.addEventListener('mousedown', function (e) {
+                        e.preventDefault();
+                        selectedArray.length = 0;
+                        inputEl.value = '';
+                        inputEl.placeholder = 'All';
+                        suggestionsEl.classList.remove('open');
+                        renderDashboardTags(tagsEl, selectedArray, inputEl);
+                        renderTable(data);
+                    });
+                    suggestionsEl.appendChild(selectAllDiv);
+
+                    filteredVals.forEach(item => {
+                        const isSelected = selectedArray.includes(item);
+                        const count = countMap[item] || 0;
+
+                        const itemDiv = document.createElement('div');
+                        itemDiv.className = 'list-group-item list-group-item-action';
+                        itemDiv.style.display = 'flex';
+                        itemDiv.style.alignItems = 'center';
+
+                        const checkIcon = document.createElement('span');
+                        checkIcon.className = 'material-symbols-outlined';
+                        checkIcon.style.marginRight = '8px';
+                        checkIcon.style.fontSize = '20px';
+                        checkIcon.textContent = isSelected ? 'check_box' : 'check_box_outline_blank';
+                        checkIcon.style.color = isSelected ? '#1A7499' : '#888';
+
+                        const leftSpan = document.createElement('span');
+                        leftSpan.style.flex = '1';
+                        leftSpan.textContent = item;
+
+                        const rightSpan = document.createElement('span');
+                        rightSpan.textContent = "(" + count + ")";
+
+                        itemDiv.appendChild(checkIcon);
+                        itemDiv.appendChild(leftSpan);
+                        itemDiv.appendChild(rightSpan);
+
+                        itemDiv.addEventListener('mousedown', function (e) {
+                            e.preventDefault();
+                            if (isSelected) {
+                                const idx = selectedArray.indexOf(item);
+                                if (idx > -1) selectedArray.splice(idx, 1);
+                            } else {
+                                selectedArray.push(item);
+                            }
+                            renderDashboardTags(tagsEl, selectedArray, inputEl);
+                            renderDashboardSuggestions(inputEl, suggestionsEl, tagsEl, selectedArray, fullList, columnIndex, inputEl.value);
+                            renderTable(data);
+                        });
+                        suggestionsEl.appendChild(itemDiv);
+                    });
+                }
+
+                function renderDashboardTags(tagsEl, selectedArray, inputEl) {
+                    tagsEl.innerHTML = '';
+                    // Do not render tag spans to prevent the box from increasing in size
+                    // Instead, dynamically update the placeholder to show selected items
+                    if (selectedArray.length === 0) {
+                        inputEl.placeholder = 'All';
+                    } else {
+                        inputEl.placeholder = selectedArray.join(', ');
+                    }
+                }
+
+                // Initialize autocomplete for all filters
+                setupDashboardAutocomplete('doerFilter', 'doerSuggestions', 'doerSelectedTags', selectedDoers, fullDoersList, 1);
+                setupDashboardAutocomplete('processFilter', 'processSuggestions', 'processSelectedTags', selectedProcesses, fullProcessesList, 2);
+                setupDashboardAutocomplete('statusFilter', 'statusSuggestions', 'statusSelectedTags', selectedStatuses, fullStatusesList, 6);
+
+                // Global document click to close suggestions
+                document.addEventListener('click', function (e) {
+                    if (!e.target.closest('.autocomplete-wrapper')) {
+                        document.querySelectorAll('#doerSuggestions, #processSuggestions, #statusSuggestions').forEach(el => el.classList.remove('open'));
+                        document.querySelectorAll('.autocomplete-wrapper').forEach(el => el.style.zIndex = '');
+                    }
                 });
 
-                // Attach event listeners to trigger filtering when dropdown values change
-                doerFilter.addEventListener('change', function () {
-                    renderTable(data);
-                });
-                processFilter.addEventListener('change', function () {
-                    renderTable(data);
-                });
-                statusFilter.addEventListener('change', function () {
-                    renderTable(data);
-                });
-
-                // Attach event listener to the "Apply" button for date range filtering
-                document.getElementById('applyDateRange').addEventListener('click', function () {
-                    renderTable(data);
-                });
-
-                // (Optional) Also filter as soon as the dates change:
                 document.getElementById('startDate').addEventListener('change', function () {
                     renderTable(data);
                 });
@@ -2863,31 +3237,33 @@
                 });
 
                 // Reset Filters
-                resetButton.addEventListener('click', function () {
-                    doerFilter.value = "";
-                    processFilter.value = "";
-                    statusFilter.value = "";
-                    document.getElementById('startDate').value = "";
-                    document.getElementById('endDate').value = "";
+                if (resetButton) {
+                    resetButton.addEventListener('click', function () {
+                        selectedDoers = [];
+                        selectedProcesses = [];
+                        selectedStatuses = [];
+                        doerFilter.value = "";
+                        doerFilter.placeholder = "All";
+                        processFilter.value = "";
+                        processFilter.placeholder = "All";
+                        statusFilter.value = "";
+                        statusFilter.placeholder = "All";
+                        document.getElementById('startDate').value = "";
+                        document.getElementById('endDate').value = "";
+                        renderDashboardTags(document.getElementById('doerSelectedTags'), selectedDoers, doerFilter);
+                        renderDashboardTags(document.getElementById('processSelectedTags'), selectedProcesses, processFilter);
+                        renderDashboardTags(document.getElementById('statusSelectedTags'), selectedStatuses, statusFilter);
+                        renderTable(data);
+                    });
+                }
 
-                    renderTable(data);
-                });
-
-                resetDateRangeButton.addEventListener('click', function () {
-                    document.getElementById('startDate').value = "";
-                    document.getElementById('endDate').value = "";
-                    renderTable(data);
-                });
-
-                resetAllFiltersButton.addEventListener('click', function () {
-                    doerFilter.value = "";
-                    processFilter.value = "";
-                    statusFilter.value = "";
-                    document.getElementById('startDate').value = "";
-                    document.getElementById('endDate').value = "";
-
-                    renderTable(data);
-                });
+                // Refresh Action
+                if (refreshButton) {
+                    refreshButton.addEventListener('click', function () {
+                        document.getElementById('globalLoader').style.display = 'flex';
+                        fetchData();
+                    });
+                }
 
                 function parseDashboardDate(dateStr) {
                     // Expects "dd-MM-yyyy HH:mm:ss" or just "dd-MM-yyyy"
@@ -2914,9 +3290,6 @@
 
                 // Define the function that renders the table
                 function renderTable(data) {
-                    const doerValue = doerFilter.value;
-                    const processValue = processFilter.value;
-                    const statusValue = statusFilter.value;
                     // Retrieve date filter values from the input fields
                     const startDateValue = document.getElementById('startDate').value;
                     const endDateValue = document.getElementById('endDate').value;
@@ -2941,20 +3314,24 @@
                         const rowDate = parseDashboardDate(row[3]);
                         const inRange = (!start || rowDate >= start) && (!end || rowDate <= end);
 
+                        const doerMatch = selectedDoers.length === 0 || selectedDoers.includes(row[1]);
+                        const processMatch = selectedProcesses.length === 0 || selectedProcesses.includes(row[2]);
+                        const statusMatch = selectedStatuses.length === 0 || selectedStatuses.includes(row[6]);
+
                         // Existing conditions for filtering based on role and other filters.
                         if (loggedInRole === 'user') {
                             return (
                                 row[0] === loggedInUser &&
-                                (doerValue === '' || row[1] === doerValue) &&
-                                (processValue === '' || row[2] === processValue) &&
-                                (statusValue === '' || row[6] === statusValue) &&
+                                doerMatch &&
+                                processMatch &&
+                                statusMatch &&
                                 inRange
                             );
                         } else {
                             return (
-                                (doerValue === '' || row[1] === doerValue) &&
-                                (processValue === '' || row[2] === processValue) &&
-                                (statusValue === '' || row[6] === statusValue) &&
+                                doerMatch &&
+                                processMatch &&
+                                statusMatch &&
                                 inRange
                             );
                         }
@@ -2993,57 +3370,18 @@
                 }
 
                 function updateDashboardFilters(filteredData) {
-                    // Get the dashboard filter dropdown elements
-                    const doerFilter = document.getElementById('doerFilter');
-                    const processFilter = document.getElementById('processFilter');
-                    const statusFilter = document.getElementById('statusFilter');
-
-                    // Save current selections so you can restore them if still valid
-                    const currentDoer = doerFilter.value;
-                    const currentProcess = processFilter.value;
-                    const currentStatus = statusFilter.value;
-
-                    // Clear existing options and add the "All" default option
-                    doerFilter.innerHTML = '<option value="">All</option>';
-                    processFilter.innerHTML = '<option value="">All</option>';
-                    statusFilter.innerHTML = '<option value="">All</option>';
-
-                    // Extract unique values from the filtered data (assuming row[1]=Doer, row[2]=Process, row[6]=Status)
-                    const doers = Array.from(new Set(filteredData.map(row => row[1]))).sort();
-                    const processes = Array.from(new Set(filteredData.map(row => row[2]))).sort();
-                    const statuses = Array.from(new Set(filteredData.map(row => row[6]))).sort();
-
-                    // Populate the dropdowns with the new options
-                    doers.forEach(val => {
-                        const option = document.createElement('option');
-                        option.value = val;
-                        option.textContent = val;
-                        doerFilter.appendChild(option);
-                    });
-
-                    processes.forEach(val => {
-                        const option = document.createElement('option');
-                        option.value = val;
-                        option.textContent = val;
-                        processFilter.appendChild(option);
-                    });
-
-                    statuses.forEach(val => {
-                        const option = document.createElement('option');
-                        option.value = val;
-                        option.textContent = val;
-                        statusFilter.appendChild(option);
-                    });
-
-                    // Restore the previous selections if they still exist in the filtered options
-                    if (doers.includes(currentDoer)) {
-                        doerFilter.value = currentDoer;
+                    // Update dropdowns if they are currently open
+                    const doerSugg = document.getElementById('doerSuggestions');
+                    if (doerSugg.classList.contains('open')) {
+                        renderDashboardSuggestions(document.getElementById('doerFilter'), doerSugg, document.getElementById('doerSelectedTags'), selectedDoers, fullDoersList, 1, document.getElementById('doerFilter').value);
                     }
-                    if (processes.includes(currentProcess)) {
-                        processFilter.value = currentProcess;
+                    const processSugg = document.getElementById('processSuggestions');
+                    if (processSugg.classList.contains('open')) {
+                        renderDashboardSuggestions(document.getElementById('processFilter'), processSugg, document.getElementById('processSelectedTags'), selectedProcesses, fullProcessesList, 2, document.getElementById('processFilter').value);
                     }
-                    if (statuses.includes(currentStatus)) {
-                        statusFilter.value = currentStatus;
+                    const statusSugg = document.getElementById('statusSuggestions');
+                    if (statusSugg.classList.contains('open')) {
+                        renderDashboardSuggestions(document.getElementById('statusFilter'), statusSugg, document.getElementById('statusSelectedTags'), selectedStatuses, fullStatusesList, 6, document.getElementById('statusFilter').value);
                     }
                 }
 
